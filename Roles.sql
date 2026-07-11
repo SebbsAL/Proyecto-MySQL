@@ -39,3 +39,4 @@ SET DEFAULT ROLE 'Recepcionista' TO 'recep_01'@'%';
 SET DEFAULT ROLE 'Usuario' TO 'usuario_01'@'%';
 SET DEFAULT ROLE 'Gerente' TO 'gerente_01'@'%';
 SET DEFAULT ROLE 'Contador' TO 'contador_01'@'%';
+-- Sujeto a Posibles Cambios para seguir la estructura con las tablas finales
