@@ -45,3 +45,27 @@ Paso 4: Asignación y Activación del Rol
 Finalmente, se vincula el rol lógico al usuario físico y se configura para que se active automáticamente al iniciar sesión:
 GRANT 'Recepcionista' TO 'recep_01'@'%';
 SET DEFAULT ROLE 'Recepcionista' TO 'recep_01'@'%';
+
+### Seguridad Avanzada: Vistas y Privacidad de Datos (Row-Level Security)
+
+Para elevar el estándar de seguridad y garantizar la estricta privacidad de los datos sensibles, el módulo de usuarios implementa **Vistas SQL** que actúan como una capa de abstracción. Este enfoque asegura que cada rol interactúe únicamente con la información estrictamente necesaria para su labor, limitando el acceso a nivel de registro.
+
+Para aplicar esta capa, se debe ejecutar el script de Vistas de Seguridad (ej. `Vistas_Seguridad.sql`), el cual revoca los accesos directos a las tablas base y otorga permisos exclusivos sobre las siguientes vistas:
+
+* **Vista `mis_datos` (Rol: Usuario):** Filtra la tabla `usuario` de forma dinámica utilizando la función `SUBSTRING_INDEX(USER(), '@', 1)`. Esto garantiza que el cliente autenticado solo pueda consultar y modificar su propio perfil, bloqueando cualquier intento de acceder a la información de otros miembros del Coworking.
+
+* **Vista `vista_reporte_corporativo` (Rol: Gerente):** A través de consultas combinadas (`JOIN`) con la tabla `empresas` y validando el usuario activo, esta vista restringe el acceso para que el gerente corporativo visualice única y exclusivamente a los empleados y la facturación asociada a su propia organización, aislando los datos de otras empresas.
+
+* **Vista `vista_gestion_recepcion` (Rol: Recepcionista):** Proyecta la tabla `usuario` permitiendo la visualización de los datos operativos (nombre, identificación, estado), pero ocultando estructuras subyacentes o información que no corresponde a la operación de la recepción.
+
+* **Vista `vista_reportes_financieros` (Rol: Contador):** Consolida la información de `facturas` y `pagos` excluyendo los datos de contacto y detalles personales de los clientes. Permite realizar cruces de información contable, auditorías y balances financieros manteniendo el anonimato de la clientela.
+
+**Paso 5: Aplicación de las Vistas de Seguridad**
+Una vez creados los roles e instanciados los usuarios, se ejecutan las sentencias que reemplazan el acceso a las tablas por el acceso a las vistas. Por ejemplo, la transición para el rol del Contador se ejecuta de la siguiente manera:
+
+```sql
+-- Se retiran permisos directos sobre la tabla de facturación
+REVOKE ALL PRIVILEGES ON coworking.facturas FROM 'Contador';
+
+-- Se otorga acceso exclusivo a la vista anonimizada
+GRANT SELECT ON coworking.vista_reportes_financieros TO 'Contador';
