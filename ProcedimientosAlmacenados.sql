@@ -1,0 +1,4 @@
+-- Procedimientos Almacenados
+-- Membresias
+-- 1. Registrar nueva membresia y asignarla a un usuario
+-- Inserta una nueva membresia con fecha de inicio, fecha de vencimiento y estado inicial
