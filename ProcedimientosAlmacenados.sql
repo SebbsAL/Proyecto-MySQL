@@ -104,3 +104,22 @@ BEGIN
 -- Util para scripts de mantenimiento
 END // 
 DELIMITER ;
+-- 4. Suspender membresias con facturas impagas por mas de X dias
+-- Cambia el estado a "Suspendida" para usuarios con deudas
+DELIMITER //
+CREATE PROCEDURE SuspenderMembresiasPorDeuda(IN p_dias_atraso INT)
+BEGIN
+-- Se actualiza el estado de la membresia a 'SUSPENDIDA' basandose en las facturas que tienen saldo pendiente y cuya fecha de vencimiento supere el plazo permitido
+-- Basandose en la formula (fecha actual - dias retraso)
+	UPDATE membresia_usuario mu
+	INNER JOIN usuario u ON mu.usuario_id = u.id
+	INNER JOIN facturas f ON u.id = f.usuario_id
+	SET mu.estado = 'SUSPENDIDA',
+		mu.fecha_suspension = CURRENT_TIMESTAMP(),
+		mu.motivo_suspension = CONCAT('Su membresia ha sido suspendida por deuda vencida desde hace mas de ', p_dias_atraso, ' dias.')
+	WHERE mu.estado = 'ACTIVA'
+	AND f.estado IN ('PENDIENTE','PARCIAL') -- No se escapa ni un moroso
+	AND f.saldo_pendiente > 0
+	AND f.fecha_vencimiento < DATE_SUB(CURRENT_DATE(), INTERVAL p_dias_atraso DAY);
+END // 
+DELIMITER ;
