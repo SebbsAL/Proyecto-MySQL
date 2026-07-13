@@ -123,3 +123,32 @@ BEGIN
 	AND f.fecha_vencimiento < DATE_SUB(CURRENT_DATE(), INTERVAL p_dias_atraso DAY);
 END // 
 DELIMITER ;
+-- Reservas y Espacios
+-- 1. Verificar disponibilidad de un espacio antes de crear reserva
+-- Comprueba que no haya solapamiento de horarios en el mismo espacio
+DELIMITER //
+CREATE PROCEDURE VerificarDisponibilidad(
+	IN p_espacio_id VARCHAR(36),
+	IN p_fecha_reserva DATE,
+	IN p_hora_inicio TIME,
+	IN p_hora_fin TIME
+)
+BEGIN
+	DECLARE v_solapamiento INT;
+-- Se busca si existe alguna reserva ya existente en el mismo tiempo de la nueva reservacion
+	SELECT COUNT(*) INTO v_solapamiento 
+	FROM reservas 
+	WHERE espacio_id = p_espacio_id 
+	AND fecha_reserva = p_fecha_reserva
+	AND estado IN ('PENDIENTE','CONFIRMADA')
+	AND p_hora_inicio < hora_fin 
+	AND p_hora_fin > hora_inicio;
+-- Si el conteo es mayor a 0, significa que el espacio ya esta reservado
+	IF v_solapamiento > 0 THEN
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Error: El espacio ya esta reservado, por favor, seleccione otro horario';
+	ELSE
+		SELECT 'Disponible' AS resultado;
+	END IF;
+END // 
+DELIMITER ;
