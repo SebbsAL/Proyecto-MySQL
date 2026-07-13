@@ -90,3 +90,17 @@ BEGIN
 	WHERE id = p_membresia_usuario_id;
 END // 
 DELIMITER ;
+-- 3. Actualizar estado de membresias vencidas
+-- Recorre las membresias y marca como "Vencida" las que superan la fecha final
+DELIMITER //
+CREATE PROCEDURE ActualizarEstadoMembresias()
+BEGIN 
+-- Se actualizan todas las membresias cuyo estado sea 'ACTIVA' y su fecha de fin sea menor a la fecha actual
+	UPDATE membresia_usuario
+	SET estado = 'VENCIDA'
+	WHERE estado = 'ACTIVA'
+	AND fecha_fin < CURRENT_DATE();
+-- Al ser una operacion masiva ya que trabaja toda la tabla, la base de datos avisa cuantas filas fueron afectadas
+-- Util para scripts de mantenimiento
+END // 
+DELIMITER ;
