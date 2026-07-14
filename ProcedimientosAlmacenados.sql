@@ -319,3 +319,74 @@ BEGIN
 -- Se usa CURRENT_TIMESTAMP ppara que tome las hora exacta, haciendo el calculo mas preciso para el calculo automatico
 END // 
 DELIMITER ;
+-- Pagos y Facturacion
+-- 1. Generar factura por membresia
+-- Crea factura al activar o renovar una membresia
+DELIMITER //
+CREATE PROCEDURE GenerarFacturaMembresia(
+    IN p_membresia_usuario_id VARCHAR(36)
+)
+BEGIN
+    DECLARE v_usuario_id VARCHAR(36);
+    DECLARE v_empresa_id VARCHAR(36);
+    DECLARE v_monto DECIMAL(12,2);
+    DECLARE v_factura_id VARCHAR(36);
+    DECLARE v_numero_factura VARCHAR(30);
+-- Obtenemos los datos de la membresia y del usuario
+    SELECT mu.usuario_id, u.empresa_id, mu.precio_pagado
+    INTO v_usuario_id, v_empresa_id, v_monto 
+    FROM membresia_usuario mu
+    INNER JOIN usuario u ON mu.usuario_id = u.id 
+    WHERE mu.id = p_membresia_usuario_id;
+-- Generamos un numero de factura unico
+    SET v_numero_factura = CONCAT('FACTURA-', LEFT(UUID(), 8));
+    SET v_factura_id = UUID();
+-- Generamos la cabecera de la factura
+    INSERT INTO facturas (
+        id,
+        numero_factura,
+        usuario_id,
+        empresa_id,
+        tipo_factura,
+        fecha_vencimiento,
+        subtotal,
+        total,
+        saldo_pendiente,
+        estado
+    ) VALUES (
+        v_factura_id,
+        v_numero_factura,
+        v_usuario_id,
+        v_empresa_id,
+        'MEMBRESIA',
+        DATE_ADD(CURRENT_DATE(), INTERVAL 15 DAY), -- Se vence a los 15 dias
+        v_monto,
+        v_monto,
+        v_monto,
+        'PENDIENTE'
+    );
+-- Generamos el detalle de la factura vinculando la membresia
+    INSERT INTO detalle_factura (
+        id,
+        factura_id,
+        concepto,
+        cantidad,
+        precio_unitario,
+        subtotal,
+        total,
+        referencia_tipo,
+        referencia_id
+    ) VALUES (
+        UUID(),
+        v_factura_id,
+        'Pago de Membresia Coworking',
+        1,
+        v_monto,
+        v_monto,
+        v_monto,
+        'MEMBRESIA',
+        p_membresia_usuario_id 
+    );
+    SELECT v_numero_factura AS factura_generada;
+END // 
+DELIMITER ;
