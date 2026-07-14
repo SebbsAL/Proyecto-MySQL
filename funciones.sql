@@ -316,3 +316,23 @@ BEGIN
 	LIMIT 1; -- solo muestre 1
 	RETURN v_id_usuario; -- id del ganador
 END;
+
+-- =============================================================================================================================================================
+	-- 19. Fecha de la última asistencia (entrada) de un usuario
+
+CREATE FUNCTION fn_ultima_asistencia(p_usuario_id VARCHAR(36))
+RETURNS DATETIME
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+    DECLARE v_ultima_fecha DATETIME; -- guarda la fecha/hora más reciente de acceso
+
+    SELECT MAX(fecha_hora) INTO v_ultima_fecha -- MAX trae la fecha más reciente, sin importar cuántas filas haya (nunca explota)
+    FROM accesos
+    WHERE usuario_id = p_usuario_id
+      AND tipo_acceso = 'ENTRADA'; -- solo entradas, para que sea "asistencia" real
+
+    RETURN v_ultima_fecha; -- si nunca asistió, devuelve NULL (no tiene sentido poner un valor fijo tipo 0 acá)
+END;
+
+
