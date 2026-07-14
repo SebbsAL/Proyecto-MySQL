@@ -563,3 +563,51 @@ FROM (SELECT usuario_id, SUM(monto) AS total_gastado FROM pagos WHERE estado = '
 		motivo_anulacion
 	FROM facturas
 	WHERE estado ='ANULADA';
+-- 56. Mostrar usuarios con facturas pendientes mayores a $200.
+	SELECT
+		fc.usuario_id,
+		CONCAT(us.nombre,' ',us.apellidos) as nombre,
+		fc.numero_factura,
+		fc.total,
+		fc.estado
+	FROM usuario us
+	JOIN facturas fc ON fc.usuario_id = us.id
+	WHERE fc.estado = 'PENDIENTE'
+		AND fc.total > 200;
+-- 57. Mostrar usuarios que han pagado más de una vez el mismo servicio.
+	SELECT
+	    sc.usuario_id,                          -- el usuario
+	    CONCAT(us.nombre,' ',us.apellidos) AS nombre, -- nombre 
+	    sc.servicio_id,                         -- el servicio contratado
+	    COUNT(*) AS veces_pagado                -- cuántas veces aparece esa combinación usuario+servicio
+	FROM servicios_contratados sc
+	JOIN usuario us ON us.id = sc.usuario_id    -- para poder traer el nombre
+	WHERE sc.estado = 'FACTURADO'               -- solo cuento contrataciones que efectivamente se pagaron/facturaron
+	GROUP BY sc.usuario_id, sc.servicio_id      -- agrupo por la COMBINACIÓN usuario+servicio, no cada uno por separado
+	HAVING COUNT(*) > 1;
+-- 58. Listar ingresos por cada método de pago.
+		SELECT 
+			mt.id,
+			mt.nombre AS nombre_metodoPago,
+			SUM(pg.monto_neto) AS ingreso_total
+			FROM metodos_pago mt
+			JOIN pagos pg ON pg.metodo_pago_id = mt.id
+			WHERE pg.estado = 'PAGADO'
+			GROUP BY mt.id
+-- 59. Mostrar facturación acumulada por empresa.
+	SELECT
+		em.nombre AS nombre_empresa,
+		SUM(fc.total) AS total
+	FROM empresas em
+	JOIN facturas fc ON em.id = fc.empresa_id
+	GROUP BY em.nombre
+-- 60. Mostrar ingresos netos por mes del último año.
+	SELECT
+		YEAR(fecha_pago) AS ANIO,
+		MONTH(fecha_pago) AS MES,
+		SUM(monto_neto) AS total_ingresos
+	FROM pagos
+	WHERE fecha_pago >= CURDATE() - INTERVAL 1 YEAR -- mi fecha actual - un año
+		AND estado = 'PAGADO'
+	GROUP BY YEAR(fecha_pago), MONTH(fecha_pago);			
+
