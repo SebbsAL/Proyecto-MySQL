@@ -108,4 +108,24 @@ BEGIN
 	FROM reservas
 	WHERE usuario_id = r_usuario_id;
 	RETURN IFNULL(r_Treservas,0);
-END;	
+END;
+
+-- ===========================================================================================================================================================
+
+	-- 7. total de horas reservadas en un un periodo
+
+CREATE FUNCTION fn_horas_reservadas(p_usuario_id VARCHAR(36), p_mes INT, p_anio INT)
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+    DECLARE v_horas DECIMAL(10,2) DEFAULT 0; -- extraigo de la tabla la cant de horas q se uso
+
+    SELECT SUM(duracion_horas) INTO v_horas 
+    FROM reservas
+    WHERE usuario_id = p_usuario_id  -- donde los id's coincidan Y ..
+      AND MONTH(fecha_reserva) = p_mes -- .. el mes de reserva coincida con el parametro 
+      AND YEAR(fecha_reserva) = p_anio -- y el año
+      AND estado IN ('COMPLETADA','CONFIRMADA' ); -- solo cuenta horas que realmente se usaron
+    RETURN IFNULL(v_horas, 0);
+END;
