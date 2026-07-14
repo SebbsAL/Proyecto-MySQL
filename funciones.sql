@@ -336,3 +336,31 @@ BEGIN
 END;
 
 
+-- =============================================================================================================================================================
+	-- 20. Promedio de asistencias por usuario (total de entradas / cantidad de usuarios distintos que registran algún acceso)
+
+CREATE FUNCTION fn_promedio_asistencias()
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+    DECLARE v_total_entradas INT DEFAULT 0; -- total de asistencias registradas
+    DECLARE v_total_usuarios INT DEFAULT 0; -- usuarios distintos con al menos una asistencia
+
+    SELECT COUNT(*), COUNT(DISTINCT usuario_id) -- contamos todo lo q hay en la tabla, almacenamos los datos unicos q hay la tabla
+    INTO v_total_entradas, v_total_usuarios -- almacenamos
+    FROM accesos
+    WHERE tipo_acceso = 'ENTRADA'; -- ponemos filtro 
+
+    IF v_total_usuarios = 0 THEN
+        RETURN 0; -- si no hay nada retornamos 0
+    ELSE
+        RETURN (v_total_entradas / v_total_usuarios); -- sino haremos la operacion x ejemplo la variable total q recibe todas las entradas
+    END IF;                             -- dividida entre la variable q solo cuenta los usuario_id DISTINTOS
+END;
+
+
+
+
+
+-- =============================================================================================================================================================
