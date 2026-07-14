@@ -230,3 +230,19 @@ BEGIN
 			AND pg.estado = 'PAGADO';
 	RETURN IFNULL(v_total_ingreso,0);
 END;
+-- =============================================================================================================================================================
+	-- 14. total de ingresos por reservas
+
+CREATE FUNCTION fn_ingresos_por_reservas()
+RETURNS DECIMAL(14,2)
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+	DECLARE v_total_ingreso DECIMAL(14,2);
+	SELECT SUM(pg.monto_neto) INTO v_total_ingreso
+	FROM pagos pg
+	JOIN facturas fc ON fc.id = pg.factura_id
+		WHERE fc.tipo_factura = 'RESERVA'
+			AND pg.estado = 'PAGADO';
+	RETURN IFNULL(v_total_ingreso,0);
+END;
