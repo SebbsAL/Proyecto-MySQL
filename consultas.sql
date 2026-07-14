@@ -793,3 +793,75 @@ FROM accesos ac
 JOIN usuario us ON ac.usuario_id = us.id
 JOIN empresas em ON us.empresa_id = em.id
 ORDER BY em.nombre ASC, ac.fecha_hora DESC;
+
+-- 76. Mostrar clientes que nunca han usado el coworking a pesar de pagar membresía.
+
+SELECT 
+    us.id AS usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre_cliente,
+    m.fecha_inicio AS inicio_membresia,
+    m.fecha_fin AS fin_membresia
+FROM usuario us
+JOIN membresia_usuario m ON us.id = m.usuario_id
+LEFT JOIN accesos ac ON us.id = ac.usuario_id
+    AND ac.tipo_acceso = 'ENTRADA'
+    AND ac.estado = 'PERMITIDO'
+WHERE ac.usuario_id IS NULL;
+
+-- 77. Mostrar accesos rechazados por intentos con QR inválido.
+SELECT 
+    ac.id AS acceso_id,
+    ac.usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre_usuario,
+    ac.fecha_hora,
+    ac.tipo_acceso,
+    ac.motivo_rechazo
+FROM accesos ac
+LEFT JOIN usuario us ON ac.usuario_id = us.id
+WHERE ac.estado = 'RECHAZADO' 
+  AND (ac.motivo_rechazo LIKE '%QR%' OR ac.motivo_rechazo LIKE '%inv%lido%')
+ORDER BY ac.fecha_hora DESC;
+
+-- 78. Mostrar accesos promedio por usuario.
+SELECT 
+    AVG(sub.total_accesos) AS promedio_accesos_por_usuario    -- Calculamos el promedio de los totales obtenidos
+FROM (
+    -- Subconsulta: Cuenta el total de accesos permitidos de cada usuario individual
+    SELECT 
+        usuario_id, 
+        COUNT(*) AS total_accesos
+    FROM accesos
+    WHERE tipo_acceso = 'ENTRADA'                             -- Contamos solo las entradas para medir asistencias reales
+      AND estado = 'PERMITIDO'                                -- Solo accesos que sí se concretaron con éxito
+    GROUP BY usuario_id
+) AS sub;                                                     -- Le asignamos un alias obligatorio a la subconsulta
+	
+-- 79. Identificar usuarios que asisten más en la mañana.
+SELECT 
+    us.id AS usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre,
+    COUNT(*) AS total_asistencias,                              -- Cuántas veces ha asistido en total
+    SUM(CASE WHEN TIME(ac.fecha_hora) BETWEEN '06:00:00' AND '11:59:59' THEN 1 ELSE 0 END) AS asistencias_manana
+FROM usuario us
+JOIN accesos ac ON us.id = ac.usuario_id
+WHERE ac.tipo_acceso = 'ENTRADA'                                -- Solo medimos entradas reales
+  AND ac.estado = 'PERMITIDO'
+GROUP BY us.id, us.nombre, us.apellidos
+-- Filtramos con HAVING para quedarnos solo con quienes van principalmente en la mañana (> 50% de sus visitas)
+HAVING asistencias_manana > (total_asistencias / 2)
+ORDER BY asistencias_manana DESC;                               -- Ordenamos para ver primero a los más madrugadores
+
+-- 80. Identificar usuarios que asisten más en la noche.
+SELECT 
+    us.id AS usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre,
+    COUNT(*) AS total_asistencias,                              -- Total de asistencias del usuario
+    SUM(CASE WHEN TIME(ac.fecha_hora) >= '18:00:00' THEN 1 ELSE 0 END) AS asistencias_noche  -- Entradas a partir de las 6 PM
+FROM usuario us
+JOIN accesos ac ON us.id = ac.usuario_id
+WHERE ac.tipo_acceso = 'ENTRADA'                                -- Solo entradas permitidas
+  AND ac.estado = 'PERMITIDO'
+GROUP BY us.id, us.nombre, us.apellidos
+-- Filtramos para quedarnos con quienes hacen más de la mitad de sus visitas en horario nocturno
+HAVING asistencias_noche > (total_asistencias / 2)
+ORDER BY asistencias_noche DESC;                               -- Ordenamos para ver a los más nocturnos primero
