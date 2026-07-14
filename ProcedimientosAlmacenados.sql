@@ -244,3 +244,60 @@ BEGIN
 	SELECT 'Reserva confirmada exitosamente' AS mensaje;
 END // 
 DELIMITER ;
+-- 4. Cancelar reserva con opcion de reembolso parcial
+-- Marca reserva como "Cancelada" y genera un registro de reembolso si aplica
+DELIMITER //
+CREATE PROCEDURE CancelarReserva(
+	IN p_reserva_id VARCHAR(36),
+	IN p_motivo VARCHAR(255),
+	IN p_porcentaje_reembolso DECIMAL(3,2) -- 0.50 para un 50% por ejemplo
+	-- Este porcentaje es flexible y puede variar segun el tiempo de anticipacion a la reserva
+)
+BEGIN
+	DECLARE v_precio_final DECIMAL(10,2);
+	DECLARE v_monto_reembolso DECIMAL(10,2);
+	DECLARE v_usuario_id VARCHAR(36);
+	DECLARE v_factura_id VARCHAR(36);
+-- Verificamos la existencia y el estado de la reserva
+	SELECT precio_final, usuario_id INTO v_precio_final, v_usuario_id 
+	FROM reservas 
+	WHERE id = p_reserva_id AND estado IN ('PENDIENTE','CONFIRMADA');
+	IF v_usuario_id IS NULL THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: Reserva Inexistente';
+	END IF;
+-- Marcamos la reserva como CANCELADA
+	UPDATE reservas
+	SET estado = 'CANCELADA',
+		fecha_cancelacion = CURRENT_TIMESTAMP(),
+		motivo_cancelacion = p_motivo 
+	WHERE id = p_reserva_id; 
+-- Si aplica reembolso, generamos su respectivo registro
+	IF p_porcentaje_reembolso > 0 THEN
+		SET v_monto_reembolso = v_precio_final * p_porcentaje_reembolso;
+-- Buscamos una factura asociada para registrar el reembolso
+		SELECT id INTO v_factura_id FROM facturas
+		WHERE usuario_id = v_usuario_id AND tipo_factura = 'RESERVA' LIMIT 1;
+-- Registramos el reembolso como un nuevo pago con el estado de 'REEMBOLSADO'
+		INSERT INTO pagos(
+			codigo_pago,
+			factura_id,
+			usuario_id,
+			metodo_pago_id,
+			monto,
+			monto_neto,
+			estado,
+			notas
+		) VALUES (
+			CONCAT('REEMBOLSO-', LEFT(UUID(), 8)),
+			v_factura_id,
+			v_usuario_id,
+			'metodo_defecto_id', -- ID del metodo de reembolso
+			v_monto_reembolso,
+			v_monto_reembolso,
+			'REEMBOLSADO',
+			CONCAT('Reembolso por cancelacion: ', p_motivo)
+		);
+	END IF;
+	SELECT 'Reserva cancelada exitosamente' AS mensaje, v_monto_reembolso AS monto_devuelto;
+END // 
+DELIMITER ;
