@@ -611,3 +611,60 @@ FROM (SELECT usuario_id, SUM(monto) AS total_gastado FROM pagos WHERE estado = '
 		AND estado = 'PAGADO'
 	GROUP BY YEAR(fecha_pago), MONTH(fecha_pago);			
 
+-- 61. Listar todos los accesos registrados hoy.
+	SELECT
+		id,             -- O el identificador del acceso
+    	usuario_id,     -- Quién entró
+    	fecha_hora,     -- A qué hora entró
+    	estado
+	FROM accesos
+	WHERE estado= 'PERMITIDO' 
+		AND DATE(fecha_hora) = CURDATE();
+-- 62. Mostrar usuarios con más de 20 asistencias en el mes.
+	SELECT
+		usuario_id,
+		COUNT(*) AS asistencias
+		FROM accesos
+		WHERE tipo_acceso = 'ENTRADA'
+			AND estado= 'PERMITIDO'
+			AND MONTH(fecha_hora) = MONTH(NOW()) 
+			AND YEAR(fecha_hora) = YEAR(NOW())
+		GROUP BY usuario_id
+		HAVING asistencias > 20;
+-- 63. Mostrar usuarios que no asistieron en la última semana.
+
+	SELECT
+	us.id AS usuario_id
+	CONCAT(us.nombre,' ',us.apellidos) AS nombre
+	FROM usuario us
+	LEFT JOIN accesos ac ON us.id = ac.usuario_id AND ac.fecha_hora >= CURDATE() - INTERVAL 7 DAY
+	WHERE ac.usuario_id IS NULL
+
+-- 64. Calcular la asistencia promedio por día de la semana.
+
+SELECT
+    DAYNAME(sub.dia_exacto) AS dia_semana, 
+    AVG(sub.total_ese_dia) AS promedio_asistencias
+FROM (
+    SELECT
+        DATE(fecha_hora) AS dia_exacto,  - 
+        COUNT(*) AS total_ese_dia
+    FROM accesos
+    WHERE tipo_acceso = 'ENTRADA'
+    GROUP BY DATE(fecha_hora)
+) AS sub
+GROUP BY DAYNAME(sub.dia_exacto)
+ORDER BY DAYOFWEEK(MIN(sub.dia_exacto));
+
+-- 65. Mostrar los 10 usuarios más constantes (más asistencias)
+SELECT
+    ac.usuario_id,                              -- el usuario
+    CONCAT(us.nombre,' ',us.apellidos) AS nombre, -- nombre completo, solo para mostrar
+    COUNT(*) AS total_asistencias                -- cuántas entradas tiene cada usuario
+FROM accesos ac
+JOIN usuario us ON us.id = ac.usuario_id
+WHERE ac.tipo_acceso = 'ENTRADA'                 -- solo entradas, para no duplicar con las salidas
+GROUP BY ac.usuario_id                            -- un grupo por usuario
+ORDER BY total_asistencias DESC                    -- de mayor a menor cantidad
+LIMIT 10;                                          -- me quedo con los primeros 10
+
