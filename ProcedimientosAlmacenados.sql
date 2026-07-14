@@ -301,3 +301,21 @@ BEGIN
 	SELECT 'Reserva cancelada exitosamente' AS mensaje, v_monto_reembolso AS monto_devuelto;
 END // 
 DELIMITER ;
+-- 5. Liberar reservas no confirmadas despues de X horas
+-- Automatiza la cancelacion de reservas en estado "Pendiente".
+DELIMITER //
+CREATE PROCEDURE LiberarReservasPendientes(IN p_horas_limite INT)
+BEGIN
+-- Actualizamos el estado a 'CANCELADA' a todas las reservas que cumplan las siguientes condiciones:
+-- Siguen en estado 'PENDIENTE'
+-- Fueron creadas hace mas tiempo que las horas limite permitidas
+	UPDATE reservas
+	SET estado = 'CANCELADA',
+		fecha_cancelacion = CURRENT_TIMESTAMP(),
+		motivo_cancelacion = CONCAT('Auto-cancelacion: Reserva no confirmada en mas de ', p_horas_limite, ' horas.')
+	WHERE estado = 'PENDIENTE'
+	AND fecha_creacion < DATE_SUB(CURRENT_TIMESTAMP(), INTERVAL p_horas_limite HOUR);
+-- Compara la fecha de creacion de la reserva con el tiempo actual menos las horas que uno defina para que automaticamente se cancele si cumple la condicion
+-- Se usa CURRENT_TIMESTAMP ppara que tome las hora exacta, haciendo el calculo mas preciso para el calculo automatico
+END // 
+DELIMITER ;
