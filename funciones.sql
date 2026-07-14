@@ -77,3 +77,22 @@ BEGIN
     RETURN IFNULL(v_renovaciones, 0); -- si no tiene membresía activa, devuelve 0
 END;
 -- ==========================================================================================================================================
+-- =============================================================================================================================================================
+	-- 5. Estado de la membresia
+
+CREATE FUNCTION fn_estado_membresia(p_usuario_id VARCHAR(36))
+RETURNS VARCHAR(100)
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+    DECLARE v_estado VARCHAR(100);
+    SELECT estado INTO v_estado
+    FROM membresia_usuario
+    WHERE usuario_id = p_usuario_id
+      AND estado IN ('ACTIVA','SUSPENDIDA','VENCIDA') -- descarta CANCELADA
+    ORDER BY fecha_inicio DESC -- prioriza la membresía más reciente
+    LIMIT 1; -- evita error por si hay varios por x oy motivo
+    RETURN IFNULL(v_estado, 'SIN MEMBRESIA'); -- si no tiene memrbesia devolvera este texto
+END;
+
+-- =============================================================================================================================================================
