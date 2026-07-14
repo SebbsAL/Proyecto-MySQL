@@ -390,3 +390,73 @@ BEGIN
     SELECT v_numero_factura AS factura_generada;
 END // 
 DELIMITER ;
+-- 2. Generar factura consolidada para empresa
+-- Agrupa cargos de empleados corporativos en una sola factura
+DELIMITER //
+CREATE PROCEDURE GenerarFacturaConsolidadaCorporativa(
+	IN p_empresa_id VARCHAR(36)
+)
+BEGIN
+	DECLARE v_factura_id VARCHAR(36);
+	DECLARE v_numero_factura VARCHAR(30);
+	DECLARE v_total_empresa DECIMAL(12,2);
+-- Calculamos el total de cargos pendientes de todos los empleados de la misma empresa
+-- Sumamos membresias, reservas y servicios contratados que no hayan sido facturados todavia
+	SELECT IFNULL(SUM(total), 0) INTO v_total_empresa 
+	FROM (
+		SELECT total
+		FROM membresia_usuario
+		WHERE usuario_id
+		IN (SELECT id
+			FROM usuario
+			WHERE empresa_id = p_empresa_id)
+			AND estado = 'ACTIVA'
+		UNION ALL -- Se unen todos los datos para generar una factura consolidada
+		SELECT precio_final
+		FROM reservas
+		WHERE usuario_id
+		IN (SELECT id
+			FROM usuario
+			WHERE empresa_id = p_empresa_id)
+			AND estado = 'COMPLETADA'
+		UNION ALL
+		SELECT total
+		FROM servicios_contratados 
+		WHERE usuario_id 
+		IN (SELECT id
+			FROM usuario
+			WHERE empresa_id = p_empresa_id)
+		AND estado = 'ACTIVO'
+		) AS cargos_pendientes;
+	IF v_total_empresa = 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: No hay cargos pendientes para esta empresa';
+	END IF;
+-- Creamos la factura consolidada
+	SET v_factura_id = UUID();
+	SET v_numero_factura = CONCAT('FACTURA-CORPORATIVA-', LEFT(v_factura_id, 8));
+	INSERT INTO facturas (
+		id,
+		numero_factura,
+		usuario_id,
+		empresa_id,
+		tipo_factura,
+		fecha_vencimiento,
+		subtotal,
+		total,
+		saldo_pendiente,
+		estado
+	) VALUES (
+		v_factura_id,
+		v_numero_factura,
+		NULL, -- El usuario es NULL al ser una factura corporativa
+		p_empresa_id,
+		'CONSOLIDADA',
+		DATE_ADD(CURRENT_DATE(), INTERVAL 30 DAY),
+		v_total_empresa,
+		v_total_empresa,
+		v_total_empresa,
+		'PENDIENTE'
+	);
+	SELECT v_numero_factura AS factura_consolidada_generada, v_total_empresa AS monto_total;
+END //
+DELIMITER ;
