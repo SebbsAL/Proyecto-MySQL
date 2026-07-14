@@ -152,3 +152,69 @@ BEGIN
 	END IF;
 END // 
 DELIMITER ;
+-- 2. Crear una nueva reserva de espacio
+-- Inserta una reserva en estado "Pendiente" y la vincula a un usuario y espacio
+DELIMITER //
+CREATE PROCEDURE CrearReserva(
+	IN p_usuario_id VARCHAR(36),
+	IN p_espacio_id VARCHAR(36),
+	IN p_fecha_reserva DATE,
+	IN p_hora_inicio TIME,
+	IN p_hora_fin TIME,
+	IN p_numero_asistentes INT,
+	IN p_motivo VARCHAR(255)
+)
+BEGIN
+	DECLARE v_precio_base DECIMAL(10,2);
+	DECLARE v_duracion DECIMAL(5,2);
+	DECLARE v_precio_total DECIMAL(10,2);
+	DECLARE v_reserva_id VARCHAR(36);
+-- Llamamos al procedimiento de VerificarDisponibilidad antes de proseguir
+-- En caso de que este ocupado, lanzara un error y se detendra el procedimiento
+	CALL VerificarDisponibilidad(p_espacio_id, p_fecha_reserva, p_hora_inicio, p_hora_fin);
+-- Calculamos la duracion en horas
+	SET v_duracion = TIMESTAMPDIFF(MINUTE, p_hora_inicio, p_hora_fin) / 60.0;
+-- Se divide por 60.0 permite que el resultado sea en decimal, facilitando el calculo matematico al momento del cobro
+-- Ademas, se divide por 60 para convertir la unidad de tiempo de minutos a horas, evitando sobrecargos al cliente
+-- Obtenemos el precio del espacio
+	SELECT tarifa_base_hora INTO v_precio_base 
+	FROM espacios e
+	INNER JOIN tipos_espacios te ON e.tipo_espacio_id = te.id 
+	WHERE e.id = p_espacio_id;
+	SET v_precio_total = v_duracion * v_precio_base;
+	SET v_reserva_id = UUID(); -- Se genera el ID manualmente para poder insertarlo despues
+-- Ahora insertamos la nueva reservacion
+	INSERT INTO reservas (
+		id,
+		codigo,
+		usuario_id,
+		espacio_id,
+		fecha_reserva,
+		hora_inicio,
+		hora_fin,
+		duracion_horas,
+		numero_asistentes,
+		motivo,
+		estado,
+		precio_total,
+		precio_final
+	) VALUES (
+		v_reserva_id,
+		CONCAT('RESERVACION-', LEFT(v_reserva_id, 8)), -- Codigo de referencia de la reservacion 
+		-- LEFT(8) Toma los primeros 8 caracteres del String UUID para la generacion de la Reservacion haciendolo amigable para el usuario y sea mas sencillo de leer
+		p_usuario_id,
+		p_espacio_id,
+		p_fecha_reserva,
+		p_hora_inicio,
+		p_hora_fin,
+		v_duracion,
+		p_numero_asistentes,
+		p_motivo,
+		'PENDIENTE',
+		v_precio_total,
+		v_precio_total
+	);
+-- Retornamos el ID generado por si llega a necesitarse
+	SELECT v_reserva_id AS id_reserva_creada;
+END // 
+DELIMITER ;
