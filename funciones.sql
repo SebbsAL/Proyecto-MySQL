@@ -184,3 +184,17 @@ BEGIN
 END;
 
 
+-- =============================================================================================================================================================
+	-- 11.total pagado por un usuario
+CREATE FUNCTION fn_total_pagado(p_usuario_id VARCHAR(36) )
+RETURNS DECIMAL(12,2)
+DETERMINISTIC 
+READS SQL DATA
+BEGIN
+	DECLARE v_total_gastado DECIMAL(12,2); 
+	SELECT SUM(monto_neto) INTO	v_total_gastado   -- uso sum para extraer el monto neto de la t. pagos  q se almacene en la variable
+	FROM pagos   							
+	WHERE usuario_id = p_usuario_id -- id's q coincidan
+		AND estado = 'PAGADO'; -- y su estado sea pagado
+	RETURN IFNULL(v_total_gastado, 0); -- ifnull para evitar errores
+END;
