@@ -246,3 +246,19 @@ BEGIN
 			AND pg.estado = 'PAGADO';
 	RETURN IFNULL(v_total_ingreso,0);
 END;
+-- =============================================================================================================================================================
+	-- 15. ingresos totales por una empresa
+
+CREATE FUNCTION fn_ingresos_por_empresa(p_empresa_id VARCHAR(36) )
+RETURNS DECIMAL(14,2)
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+	DECLARE v_total_ingreso DECIMAL(14,2);
+	SELECT SUM(pg.monto_neto) INTO v_total_ingreso
+	FROM pagos pg
+	JOIN facturas fc ON fc.id = pg.factura_id
+		WHERE fc.empresa_id = p_empresa_id
+			AND pg.estado = 'PAGADO';
+	RETURN IFNULL(v_total_ingreso,0);
+END;
