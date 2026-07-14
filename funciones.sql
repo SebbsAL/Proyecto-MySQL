@@ -129,3 +129,23 @@ BEGIN
       AND estado IN ('COMPLETADA','CONFIRMADA' ); -- solo cuenta horas que realmente se usaron
     RETURN IFNULL(v_horas, 0);
 END;
+-- =============================================================================================================================================================
+
+	-- 8. retorna el ID del espacio más usado.
+
+CREATE FUNCTION fn_espacio_mas_reservado()
+RETURNS VARCHAR(36)
+DETERMINISTIC
+READS SQL DATA
+BEGIN 
+	DECLARE v_espacio_id VARCHAR(36); -- variables para guardar el id y 
+	DECLARE v_cantidad INT; 			-- .. cantidad de veces q se reservo
+	SELECT espacio_id, COUNT(*) AS total -- seleciono el id y cuento la cantidad de veces q se repite -> 
+	INTO v_espacio_id, v_cantidad			-- .. y lo "guardo" como total para abajo llamarlo
+	FROM reservas
+	GROUP BY espacio_id -- junto las filas por id de espacio asi como formando grupos...
+	ORDER BY total DESC	 -- .. el COUNT cuenta cuántas filas hay en cada grupo
+	LIMIT 1; -- traigo el ganador
+	RETURN v_espacio_id; -- retorno el id
+END;
+
