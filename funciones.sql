@@ -262,3 +262,19 @@ BEGIN
 			AND pg.estado = 'PAGADO';
 	RETURN IFNULL(v_total_ingreso,0);
 END;
+-- =============================================================================================================================================================
+	-- 16.  cantidad total de asistencias del usuario
+
+CREATE FUNCTION fn_total_asistencias(p_usuario_id VARCHAR(36) )
+RETURNS INT
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+	DECLARE v_total_asistencias INT;
+	SELECT COUNT(id)                     -- cuento los id's q pasen por el WHERE
+	INTO v_total_asistencias
+	FROM accesos
+	WHERE tipo_acceso = 'ENTRADA'
+		AND usuario_id = p_usuario_id;
+	RETURN v_total_asistencias;
+END;
