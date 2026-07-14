@@ -519,3 +519,349 @@ WHERE u.id NOT IN (SELECT DISTINCT p.usuario_id FROM pagos p JOIN metodos_pago m
 SELECT
     AVG(total_gastado) AS promedio_gasto
 FROM (SELECT usuario_id, SUM(monto) AS total_gastado FROM pagos WHERE estado = 'PAGADO' GROUP BY usuario_id) AS gastos_usuarios;
+
+-- 51. Mostrar el top 5 de usuarios que más han pagado en total.
+	SELECT
+		CONCAT(us.nombre,' ',us.apellidos) as nombre,
+		SUM(pg.monto_neto) AS total_Pagado
+	FROM usuario us
+	JOIN pagos pg ON pg.usuario_id = us.id
+	WHERE pg.estado = 'PAGADO'
+	GROUP BY us.id
+	ORDER BY total_Pagado DESC
+	LIMIT 5;
+-- 52. Mostrar facturas con monto mayor a $1000.
+	SELECT 
+		numero_factura,
+		fecha_emision,
+		total AS Monto
+	FROM facturas
+	WHERE total > 1000;
+-- 53. Listar pagos realizados después de la fecha de vencimiento.
+	SELECT 
+		pg.id,
+		pg.monto_neto,
+		pg.fecha_pago,
+		fc.fecha_vencimiento
+	FROM pagos pg
+	JOIN facturas fc ON pg.factura_id = fc.id
+	WHERE pg.fecha_pago > fc.fecha_vencimiento
+		AND pg.estado = 'PAGADO';
+-- 54. Calcular el total recaudado en el año actual.
+	SELECT 
+		YEAR(NOW()) AS ANIO_actual,
+		SUM(monto_neto) AS total_recaudado
+		FROM pagos
+		WHERE estado = 'PAGADO'
+			AND YEAR(fecha_pago) = YEAR(NOW());
+-- 55. Mostrar facturas anuladas y su motivo.
+	SELECT
+		numero_factura,
+		tipo_factura,
+		total,
+		estado,
+		motivo_anulacion
+	FROM facturas
+	WHERE estado ='ANULADA';
+-- 56. Mostrar usuarios con facturas pendientes mayores a $200.
+	SELECT
+		fc.usuario_id,
+		CONCAT(us.nombre,' ',us.apellidos) as nombre,
+		fc.numero_factura,
+		fc.total,
+		fc.estado
+	FROM usuario us
+	JOIN facturas fc ON fc.usuario_id = us.id
+	WHERE fc.estado = 'PENDIENTE'
+		AND fc.total > 200;
+-- 57. Mostrar usuarios que han pagado más de una vez el mismo servicio.
+	SELECT
+	    sc.usuario_id,                          -- el usuario
+	    CONCAT(us.nombre,' ',us.apellidos) AS nombre, -- nombre 
+	    sc.servicio_id,                         -- el servicio contratado
+	    COUNT(*) AS veces_pagado                -- cuántas veces aparece esa combinación usuario+servicio
+	FROM servicios_contratados sc
+	JOIN usuario us ON us.id = sc.usuario_id    -- para poder traer el nombre
+	WHERE sc.estado = 'FACTURADO'               -- solo cuento contrataciones que efectivamente se pagaron/facturaron
+	GROUP BY sc.usuario_id, sc.servicio_id      -- agrupo por la COMBINACIÓN usuario+servicio, no cada uno por separado
+	HAVING COUNT(*) > 1;
+-- 58. Listar ingresos por cada método de pago.
+		SELECT 
+			mt.id,
+			mt.nombre AS nombre_metodoPago,
+			SUM(pg.monto_neto) AS ingreso_total
+			FROM metodos_pago mt
+			JOIN pagos pg ON pg.metodo_pago_id = mt.id
+			WHERE pg.estado = 'PAGADO'
+			GROUP BY mt.id
+-- 59. Mostrar facturación acumulada por empresa.
+	SELECT
+		em.nombre AS nombre_empresa,
+		SUM(fc.total) AS total
+	FROM empresas em
+	JOIN facturas fc ON em.id = fc.empresa_id
+	GROUP BY em.nombre
+-- 60. Mostrar ingresos netos por mes del último año.
+	SELECT
+		YEAR(fecha_pago) AS ANIO,
+		MONTH(fecha_pago) AS MES,
+		SUM(monto_neto) AS total_ingresos
+	FROM pagos
+	WHERE fecha_pago >= CURDATE() - INTERVAL 1 YEAR -- mi fecha actual - un año
+		AND estado = 'PAGADO'
+	GROUP BY YEAR(fecha_pago), MONTH(fecha_pago);			
+
+-- 61. Listar todos los accesos registrados hoy.
+	SELECT
+		id,             -- O el identificador del acceso
+    	usuario_id,     -- Quién entró
+    	fecha_hora,     -- A qué hora entró
+    	estado
+	FROM accesos
+	WHERE estado= 'PERMITIDO' 
+		AND DATE(fecha_hora) = CURDATE();
+-- 62. Mostrar usuarios con más de 20 asistencias en el mes.
+	SELECT
+		usuario_id,
+		COUNT(*) AS asistencias
+		FROM accesos
+		WHERE tipo_acceso = 'ENTRADA'
+			AND estado= 'PERMITIDO'
+			AND MONTH(fecha_hora) = MONTH(NOW()) 
+			AND YEAR(fecha_hora) = YEAR(NOW())
+		GROUP BY usuario_id
+		HAVING asistencias > 20;
+-- 63. Mostrar usuarios que no asistieron en la última semana.
+
+	SELECT
+	us.id AS usuario_id
+	CONCAT(us.nombre,' ',us.apellidos) AS nombre
+	FROM usuario us
+	LEFT JOIN accesos ac ON us.id = ac.usuario_id AND ac.fecha_hora >= CURDATE() - INTERVAL 7 DAY
+	WHERE ac.usuario_id IS NULL
+
+-- 64. Calcular la asistencia promedio por día de la semana.
+
+SELECT
+    DAYNAME(sub.dia_exacto) AS dia_semana, 
+    AVG(sub.total_ese_dia) AS promedio_asistencias
+FROM (
+    SELECT
+        DATE(fecha_hora) AS dia_exacto,  - 
+        COUNT(*) AS total_ese_dia
+    FROM accesos
+    WHERE tipo_acceso = 'ENTRADA'
+    GROUP BY DATE(fecha_hora)
+) AS sub
+GROUP BY DAYNAME(sub.dia_exacto)
+ORDER BY DAYOFWEEK(MIN(sub.dia_exacto));
+
+-- 65. Mostrar los 10 usuarios más constantes (más asistencias)
+SELECT
+    ac.usuario_id,                              -- el usuario
+    CONCAT(us.nombre,' ',us.apellidos) AS nombre, -- nombre completo, solo para mostrar
+    COUNT(*) AS total_asistencias                -- cuántas entradas tiene cada usuario
+FROM accesos ac
+JOIN usuario us ON us.id = ac.usuario_id
+WHERE ac.tipo_acceso = 'ENTRADA'                 -- solo entradas, para no duplicar con las salidas
+GROUP BY ac.usuario_id                            -- un grupo por usuario
+ORDER BY total_asistencias DESC                    -- de mayor a menor cantidad
+LIMIT 10;                                          -- me quedo con los primeros 10
+
+-- 66. Mostrar accesos fuera del horario permitido
+SELECT
+    ac.id,
+    ac.usuario_id,
+    ac.fecha_hora,
+    TIME(ac.fecha_hora) AS hora_del_acceso        -- extraigo solo la hora, sin la fecha
+FROM accesos ac
+WHERE TIME(ac.fecha_hora) NOT BETWEEN '08:00:00' AND '20:00:00'; -- fuera del horario general del coworking
+
+-- 67. Mostrar usuarios que accedieron sin membresía activa (rechazados).
+	SELECT 
+		us.id,
+		CONCAT(us.nombre,' ',us.apellidos) as nombre,
+		ac.estado
+	FROM accesos ac
+	JOIN usuario us ON ac.usuario_id = us.id
+	WHERE ac.estado= 'RECHAZADO';
+
+
+-- 68. Listar usuarios que solo acceden los fines de semana.
+SELECT
+    us.id AS usuario_id,                                          -- ID único del usuario
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre                -- Nombre completo para visualización
+FROM usuario us
+JOIN accesos ac ON us.id = ac.usuario_id                          -- Relacionamos con sus registros de acceso
+GROUP BY us.id, us.nombre, us.apellidos                          -- Agrupamos por usuario para analizar su historial completo
+HAVING SUM(
+    CASE 
+        -- DAYOFWEEK devuelve: 1=Domingo, 2=Lunes, 3=Martes, 4=Miércoles, 5=Jueves, 6=Viernes, 7=Sábado
+        -- Si el acceso fue en un día de semana laboral (Lunes a Viernes)...
+        WHEN DAYOFWEEK(ac.fecha_hora) IN (2, 3, 4, 5, 6) THEN 1 
+        -- Si fue en fin de semana (Sábado o Domingo)...
+        ELSE 0 
+    END
+) = 0; -- Exigimos que la suma de accesos en días hábiles sea 0 (es decir, nunca fue entre lunes y viernes)
+
+
+-- 69. Mostrar usuarios que accedieron más de 2 veces en el mismo día.
+SELECT 
+    us.id AS usuario_id,
+    CONCAT(us.nombre,' ',us.apellidos) AS nombre,
+    COUNT(ac.usuario_id) AS ingresos
+FROM usuario us
+JOIN accesos ac ON us.id = ac.usuario_id
+WHERE ac.estado = 'PERMITIDO'
+    AND DATE(ac.fecha_hora) = CURDATE()
+GROUP BY us.id
+HAVING ingresos > 2;
+-- 70. Mostrar el total de accesos diarios en el último mes.
+
+SELECT
+    DATE(ac.fecha_hora) AS fecha,                        -- Extraemos solo la parte de la fecha (YYYY-MM-DD)
+    COUNT(*) AS total_accesos                           -- Contamos el número total de registros de ese día
+FROM accesos ac
+WHERE ac.fecha_hora >= NOW() - INTERVAL 1 MONTH         -- Filtramos para que solo tome los registros del último mes (últimos 30 días)
+GROUP BY DATE(ac.fecha_hora)                            -- Agrupamos los resultados día por día
+ORDER BY fecha DESC;                                    -- Ordenamos de la fecha más reciente a la más antigua
+
+
+-- 71. Mostrar usuarios que han accedido pero no tienen reservas.
+SELECT DISTINCT
+    us.id AS usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre
+FROM usuario us
+JOIN accesos ac ON us.id = ac.usuario_id
+WHERE NOT EXISTS (
+    SELECT 1 
+    FROM reservas re 
+    WHERE re.usuario_id = us.id
+);
+-- 72. Mostrar los días con más concurrencia en el coworking.
+SELECT
+    DAYNAME(ac.fecha_hora) AS dia_semana,                      -- Nombre del día (Monday, Tuesday, etc.)
+    COUNT(*) AS total_accesos                                  -- Total de accesos registrados en ese día de la semana
+FROM accesos ac
+WHERE ac.tipo_acceso = 'ENTRADA'                               -- Contamos solo las entradas para medir concurrencia real
+GROUP BY DAYNAME(ac.fecha_hora), DAYOFWEEK(ac.fecha_hora)      -- Agrupamos por el nombre y el número del día
+ORDER BY total_accesos DESC;                                   -- Ordenamos de mayor a menor concurrencia
+
+-- 73. Mostrar usuarios que entraron pero no registraron salida.
+SELECT 
+    us.id AS usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre,
+    ult_acceso.fecha_hora AS fecha_hora_entrada                -- Fecha y hora en la que entró
+FROM usuario us
+JOIN (
+    -- Subconsulta para obtener el último acceso de cada usuario
+    SELECT ac1.usuario_id, ac1.tipo_acceso, ac1.fecha_hora
+    FROM accesos ac1
+    WHERE ac1.fecha_hora = (
+        SELECT MAX(ac2.fecha_hora)
+        FROM accesos ac2
+        WHERE ac2.usuario_id = ac1.usuario_id
+    )
+) AS ult_acceso ON us.id = ult_acceso.usuario_id
+WHERE ult_acceso.tipo_acceso = 'ENTRADA';                     -- Si el último registro es ENTRADA, no ha registrado salida
+
+-- 74. Mostrar accesos de usuarios con membresía vencida.
+
+SELECT 
+    ac.id AS acceso_id,
+    ac.usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre_usuario,
+    ac.fecha_hora AS fecha_hora_acceso,
+    m.fecha_fin AS fecha_vencimiento_membresia
+FROM accesos ac
+JOIN usuario us ON ac.usuario_id = us.id
+JOIN membresia_usuario m ON us.id = m.usuario_id
+WHERE ac.fecha_hora > m.fecha_fin
+    AND m.estado = 'VENCIDA'
+ORDER BY ac.fecha_hora DESC;
+
+-- 75. Mostrar accesos de usuarios corporativos por empresa.
+
+SELECT
+    em.nombre AS nombre_empresa,
+    us.id AS usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre_empleado,
+    ac.fecha_hora AS fecha_hora_acceso,
+    ac.tipo_acceso,
+    ac.estado
+FROM accesos ac
+JOIN usuario us ON ac.usuario_id = us.id
+JOIN empresas em ON us.empresa_id = em.id
+ORDER BY em.nombre ASC, ac.fecha_hora DESC;
+
+-- 76. Mostrar clientes que nunca han usado el coworking a pesar de pagar membresía.
+
+SELECT 
+    us.id AS usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre_cliente,
+    m.fecha_inicio AS inicio_membresia,
+    m.fecha_fin AS fin_membresia
+FROM usuario us
+JOIN membresia_usuario m ON us.id = m.usuario_id
+LEFT JOIN accesos ac ON us.id = ac.usuario_id
+    AND ac.tipo_acceso = 'ENTRADA'
+    AND ac.estado = 'PERMITIDO'
+WHERE ac.usuario_id IS NULL;
+
+-- 77. Mostrar accesos rechazados por intentos con QR inválido.
+SELECT 
+    ac.id AS acceso_id,
+    ac.usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre_usuario,
+    ac.fecha_hora,
+    ac.tipo_acceso,
+    ac.motivo_rechazo
+FROM accesos ac
+LEFT JOIN usuario us ON ac.usuario_id = us.id
+WHERE ac.estado = 'RECHAZADO' 
+  AND (ac.motivo_rechazo LIKE '%QR%' OR ac.motivo_rechazo LIKE '%inv%lido%')
+ORDER BY ac.fecha_hora DESC;
+
+-- 78. Mostrar accesos promedio por usuario.
+SELECT 
+    AVG(sub.total_accesos) AS promedio_accesos_por_usuario    -- Calculamos el promedio de los totales obtenidos
+FROM (
+    -- Subconsulta: Cuenta el total de accesos permitidos de cada usuario individual
+    SELECT 
+        usuario_id, 
+        COUNT(*) AS total_accesos
+    FROM accesos
+    WHERE tipo_acceso = 'ENTRADA'                             -- Contamos solo las entradas para medir asistencias reales
+      AND estado = 'PERMITIDO'                                -- Solo accesos que sí se concretaron con éxito
+    GROUP BY usuario_id
+) AS sub;                                                     -- Le asignamos un alias obligatorio a la subconsulta
+	
+-- 79. Identificar usuarios que asisten más en la mañana.
+SELECT 
+    us.id AS usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre,
+    COUNT(*) AS total_asistencias,                              -- Cuántas veces ha asistido en total
+    SUM(CASE WHEN TIME(ac.fecha_hora) BETWEEN '06:00:00' AND '11:59:59' THEN 1 ELSE 0 END) AS asistencias_manana
+FROM usuario us
+JOIN accesos ac ON us.id = ac.usuario_id
+WHERE ac.tipo_acceso = 'ENTRADA'                                -- Solo medimos entradas reales
+  AND ac.estado = 'PERMITIDO'
+GROUP BY us.id, us.nombre, us.apellidos
+-- Filtramos con HAVING para quedarnos solo con quienes van principalmente en la mañana (> 50% de sus visitas)
+HAVING asistencias_manana > (total_asistencias / 2)
+ORDER BY asistencias_manana DESC;                               -- Ordenamos para ver primero a los más madrugadores
+
+-- 80. Identificar usuarios que asisten más en la noche.
+SELECT 
+    us.id AS usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre,
+    COUNT(*) AS total_asistencias,                              -- Total de asistencias del usuario
+    SUM(CASE WHEN TIME(ac.fecha_hora) >= '18:00:00' THEN 1 ELSE 0 END) AS asistencias_noche  -- Entradas a partir de las 6 PM
+FROM usuario us
+JOIN accesos ac ON us.id = ac.usuario_id
+WHERE ac.tipo_acceso = 'ENTRADA'                                -- Solo entradas permitidas
+  AND ac.estado = 'PERMITIDO'
+GROUP BY us.id, us.nombre, us.apellidos
+-- Filtramos para quedarnos con quienes hacen más de la mitad de sus visitas en horario nocturno
+HAVING asistencias_noche > (total_asistencias / 2)
+ORDER BY asistencias_noche DESC;                               -- Ordenamos para ver a los más nocturnos primero
