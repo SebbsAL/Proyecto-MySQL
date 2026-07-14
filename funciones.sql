@@ -167,3 +167,20 @@ END;
 	END;
 		
 
+-- =============================================================================================================================================================
+	-- 10. promedio de duración de reservas en un espacio
+
+CREATE FUNCTION fn_duracion_promedio_reservas(p_espacio_id VARCHAR(36) )
+RETURNS DECIMAL(5,2)
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+	DECLARE v_duracion DECIMAL(5,2);
+	SELECT AVG(duracion_horas) INTO v_duracion
+	FROM reservas
+	WHERE espacio_id = p_espacio_id
+		AND estado IN ('COMPLETADA','CONFIRMADA');
+	RETURN IFNULL(v_duracion, 0);
+END;
+
+
