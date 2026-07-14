@@ -59,5 +59,21 @@ BEGIN
 	RETURN IFNULL(tipoMemb,"no tiene ninguna membresia activa");
 END;
 
--- =============================================================================================================================================================
+-- =============================================================================================================================================
+-- 4. numero de veces que renovo una membresia
 
+	CREATE FUNCTION fn_renovaciones_membresia(p_usuario_id VARCHAR(36))
+RETURNS INT
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+    DECLARE v_renovaciones INT DEFAULT 0; -- guarda el número de renovaciones
+    SELECT renovaciones INTO v_renovaciones
+    FROM membresia_usuario
+    WHERE usuario_id = p_usuario_id
+      AND estado = 'ACTIVA'
+    LIMIT 1; -- evita errores x si hubiera mas de una memb en setado activa
+
+    RETURN IFNULL(v_renovaciones, 0); -- si no tiene membresía activa, devuelve 0
+END;
+-- ==========================================================================================================================================
