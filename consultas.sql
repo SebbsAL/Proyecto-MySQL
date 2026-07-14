@@ -727,3 +727,69 @@ GROUP BY DATE(ac.fecha_hora)                            -- Agrupamos los resulta
 ORDER BY fecha DESC;                                    -- Ordenamos de la fecha más reciente a la más antigua
 
 
+-- 71. Mostrar usuarios que han accedido pero no tienen reservas.
+SELECT DISTINCT
+    us.id AS usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre
+FROM usuario us
+JOIN accesos ac ON us.id = ac.usuario_id
+WHERE NOT EXISTS (
+    SELECT 1 
+    FROM reservas re 
+    WHERE re.usuario_id = us.id
+);
+-- 72. Mostrar los días con más concurrencia en el coworking.
+SELECT
+    DAYNAME(ac.fecha_hora) AS dia_semana,                      -- Nombre del día (Monday, Tuesday, etc.)
+    COUNT(*) AS total_accesos                                  -- Total de accesos registrados en ese día de la semana
+FROM accesos ac
+WHERE ac.tipo_acceso = 'ENTRADA'                               -- Contamos solo las entradas para medir concurrencia real
+GROUP BY DAYNAME(ac.fecha_hora), DAYOFWEEK(ac.fecha_hora)      -- Agrupamos por el nombre y el número del día
+ORDER BY total_accesos DESC;                                   -- Ordenamos de mayor a menor concurrencia
+
+-- 73. Mostrar usuarios que entraron pero no registraron salida.
+SELECT 
+    us.id AS usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre,
+    ult_acceso.fecha_hora AS fecha_hora_entrada                -- Fecha y hora en la que entró
+FROM usuario us
+JOIN (
+    -- Subconsulta para obtener el último acceso de cada usuario
+    SELECT ac1.usuario_id, ac1.tipo_acceso, ac1.fecha_hora
+    FROM accesos ac1
+    WHERE ac1.fecha_hora = (
+        SELECT MAX(ac2.fecha_hora)
+        FROM accesos ac2
+        WHERE ac2.usuario_id = ac1.usuario_id
+    )
+) AS ult_acceso ON us.id = ult_acceso.usuario_id
+WHERE ult_acceso.tipo_acceso = 'ENTRADA';                     -- Si el último registro es ENTRADA, no ha registrado salida
+
+-- 74. Mostrar accesos de usuarios con membresía vencida.
+
+SELECT 
+    ac.id AS acceso_id,
+    ac.usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre_usuario,
+    ac.fecha_hora AS fecha_hora_acceso,
+    m.fecha_fin AS fecha_vencimiento_membresia
+FROM accesos ac
+JOIN usuario us ON ac.usuario_id = us.id
+JOIN membresia_usuario m ON us.id = m.usuario_id
+WHERE ac.fecha_hora > m.fecha_fin
+    AND m.estado = 'VENCIDA'
+ORDER BY ac.fecha_hora DESC;
+
+-- 75. Mostrar accesos de usuarios corporativos por empresa.
+
+SELECT
+    em.nombre AS nombre_empresa,
+    us.id AS usuario_id,
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre_empleado,
+    ac.fecha_hora AS fecha_hora_acceso,
+    ac.tipo_acceso,
+    ac.estado
+FROM accesos ac
+JOIN usuario us ON ac.usuario_id = us.id
+JOIN empresas em ON us.empresa_id = em.id
+ORDER BY em.nombre ASC, ac.fecha_hora DESC;
