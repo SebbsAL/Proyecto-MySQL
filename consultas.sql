@@ -668,3 +668,62 @@ GROUP BY ac.usuario_id                            -- un grupo por usuario
 ORDER BY total_asistencias DESC                    -- de mayor a menor cantidad
 LIMIT 10;                                          -- me quedo con los primeros 10
 
+-- 66. Mostrar accesos fuera del horario permitido
+SELECT
+    ac.id,
+    ac.usuario_id,
+    ac.fecha_hora,
+    TIME(ac.fecha_hora) AS hora_del_acceso        -- extraigo solo la hora, sin la fecha
+FROM accesos ac
+WHERE TIME(ac.fecha_hora) NOT BETWEEN '08:00:00' AND '20:00:00'; -- fuera del horario general del coworking
+
+-- 67. Mostrar usuarios que accedieron sin membresía activa (rechazados).
+	SELECT 
+		us.id,
+		CONCAT(us.nombre,' ',us.apellidos) as nombre,
+		ac.estado
+	FROM accesos ac
+	JOIN usuario us ON ac.usuario_id = us.id
+	WHERE ac.estado= 'RECHAZADO';
+
+
+-- 68. Listar usuarios que solo acceden los fines de semana.
+SELECT
+    us.id AS usuario_id,                                          -- ID único del usuario
+    CONCAT(us.nombre, ' ', us.apellidos) AS nombre                -- Nombre completo para visualización
+FROM usuario us
+JOIN accesos ac ON us.id = ac.usuario_id                          -- Relacionamos con sus registros de acceso
+GROUP BY us.id, us.nombre, us.apellidos                          -- Agrupamos por usuario para analizar su historial completo
+HAVING SUM(
+    CASE 
+        -- DAYOFWEEK devuelve: 1=Domingo, 2=Lunes, 3=Martes, 4=Miércoles, 5=Jueves, 6=Viernes, 7=Sábado
+        -- Si el acceso fue en un día de semana laboral (Lunes a Viernes)...
+        WHEN DAYOFWEEK(ac.fecha_hora) IN (2, 3, 4, 5, 6) THEN 1 
+        -- Si fue en fin de semana (Sábado o Domingo)...
+        ELSE 0 
+    END
+) = 0; -- Exigimos que la suma de accesos en días hábiles sea 0 (es decir, nunca fue entre lunes y viernes)
+
+
+-- 69. Mostrar usuarios que accedieron más de 2 veces en el mismo día.
+SELECT 
+    us.id AS usuario_id,
+    CONCAT(us.nombre,' ',us.apellidos) AS nombre,
+    COUNT(ac.usuario_id) AS ingresos
+FROM usuario us
+JOIN accesos ac ON us.id = ac.usuario_id
+WHERE ac.estado = 'PERMITIDO'
+    AND DATE(ac.fecha_hora) = CURDATE()
+GROUP BY us.id
+HAVING ingresos > 2;
+-- 70. Mostrar el total de accesos diarios en el último mes.
+
+SELECT
+    DATE(ac.fecha_hora) AS fecha,                        -- Extraemos solo la parte de la fecha (YYYY-MM-DD)
+    COUNT(*) AS total_accesos                           -- Contamos el número total de registros de ese día
+FROM accesos ac
+WHERE ac.fecha_hora >= NOW() - INTERVAL 1 MONTH         -- Filtramos para que solo tome los registros del último mes (últimos 30 días)
+GROUP BY DATE(ac.fecha_hora)                            -- Agrupamos los resultados día por día
+ORDER BY fecha DESC;                                    -- Ordenamos de la fecha más reciente a la más antigua
+
+
