@@ -298,3 +298,21 @@ BEGIN
 	RETURN v_total_asistencias;
 END;
 
+-- =============================================================================================================================================================
+	-- 18. usuario que mas asistio
+
+CREATE FUNCTION fn_top_usuario_asistencias()
+RETURNS	VARCHAR(155)
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+	DECLARE v_id_usuario VARCHAR(36);  -- guardar id del usuario q mas asistio
+	DECLARE v_total_asistencias INT; -- poder guardar la cantidad de veces q asistio
+	SELECT usuario_id, COUNT(*) AS total -- selecionamos el usuario_id y contamos todos los usuarios_id
+	INTO v_id_usuario, v_total_asistencias -- almacenamos en las variables
+	FROM accesos
+	GROUP BY usuario_id -- agrupamos por usuario id 
+	ORDER BY total DESC -- ordenamos de mayor a menor
+	LIMIT 1; -- solo muestre 1
+	RETURN v_id_usuario; -- id del ganador
+END;
