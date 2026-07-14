@@ -218,3 +218,29 @@ BEGIN
 	SELECT v_reserva_id AS id_reserva_creada;
 END // 
 DELIMITER ;
+-- 3. Confirmar reserva con pago
+-- Cambia estado de reserva a "Confirmada" al registrar el pago
+DELIMITER //
+CREATE PROCEDURE ConfirmarReserva(
+	IN p_reserva_id VARCHAR(36),
+	IN p_pago_id VARCHAR(36)
+)
+BEGIN
+	DECLARE v_estado_reserva ENUM('PENDIENTE','CONFIRMADA','CANCELADA','NOSHOW','COMPLETADA');
+-- Verificamos que la reserva exista y este en estado PENDIENTE
+	SELECT estado INTO v_estado_reserva 
+	FROM reservas
+	WHERE id = p_reserva_id;
+	IF v_estado_reserva IS NULL THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: La reserva a confirmar no existe';
+	ELSEIF v_estado_reserva != 'PENDIENTE' THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: Solo se pueden confirmar reservas que esten en estado PENDIENTE.';
+	END IF;
+-- Se actualiza el estado de la reserva y registramos la fecha de confirmacion
+	UPDATE reservas 
+	SET estado = 'CONFIRMADA',
+		fecha_confirmacion = CURRENT_TIMESTAMP()
+	WHERE id = p_reserva_id;
+	SELECT 'Reserva confirmada exitosamente' AS mensaje;
+END // 
+DELIMITER ;
