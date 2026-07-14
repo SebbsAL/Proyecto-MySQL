@@ -96,3 +96,16 @@ BEGIN
 END;
 
 -- =============================================================================================================================================================
+	-- 6. cantidad total de reservas del usuario
+
+CREATE FUNCTION fn_total_reservas(r_usuario_id VARCHAR(36))
+RETURNS INT
+DETERMINISTIC 
+READS SQL DATA
+BEGIN
+	DECLARE r_Treservas INT DEFAULT 0;
+	SELECT COUNT(*) INTO r_Treservas
+	FROM reservas
+	WHERE usuario_id = r_usuario_id;
+	RETURN IFNULL(r_Treservas,0);
+END;	
