@@ -548,3 +548,33 @@ BEGIN
 	END IF;
 END // 
 DELIMITER ;
+-- 2. Registrar salida de usuario
+-- Completa la asistencia del usuario y marca hora de salida
+DELIMITER //
+CREATE PROCEDURE RegistrarAccesoSalida(
+	IN p_usuario_id VARCHAR(36)
+)
+BEGIN 
+	DECLARE v_log_id VARCHAR(36);
+-- Buscamos el ID del registro de entrada mas reciente que no tenga hora de salida
+	SELECT id INTO v_log_id
+	FROM asistencia_logs
+	WHERE usuario_id = p_usuario_id 
+	AND tipo_movimiento = 'ENTRADA'
+	AND hora_salida IS NULL
+	ORDER BY fecha DESC, hora_entrada DESC 
+	LIMIT 1;
+-- Si no existe un registro de entrada, se lanza un error
+	IF v_log_id IS NULL THEN
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Error: No se encontro ningun registro de entrada';
+	ELSE
+-- Actualizamos el registro de salida
+		UPDATE asistencia_logs
+		SET hora_salida = CURRENT_TIME(),
+			tipo_movimiento = 'SALIDA'
+		WHERE id = v_log_id;
+		SELECT 'Salida registrada correctamente' AS mensaje;
+	END IF;
+END // 
+DELIMITER ;
