@@ -41,4 +41,23 @@ BEGIN
 
     RETURN v_dias;
 END;
+-- ================================================================================================================================================
+-- 3. tipo actual de membresia
+
+CREATE FUNCTION fn_tipo_membresia(p_usuario_id VARCHAR(36))
+RETURNS VARCHAR(255)
+DETERMINISTIC 
+READS SQL DATA
+BEGIN
+	DECLARE tipoMemb VARCHAR(255);  -- declaro variable para retornar el tipo de memb
+	SELECT tm.nombre INTO tipoMemb
+	FROM tipos_membresia tm 
+	JOIN membresia_usuario mu ON mu.tipo_membresia_id = tm.id -- uno las tablas que se conenctan, con joins
+		WHERE p_usuario_id = mu.usuario_id  -- filtro por id y
+			AND	mu.estado = 'ACTIVA' -- el estado activo
+		LIMIT 1; --  hace q retorne una sola fila
+	RETURN IFNULL(tipoMemb,"no tiene ninguna membresia activa");
+END;
+
+-- =============================================================================================================================================================
 
