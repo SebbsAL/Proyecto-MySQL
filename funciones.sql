@@ -198,3 +198,19 @@ BEGIN
 		AND estado = 'PAGADO'; -- y su estado sea pagado
 	RETURN IFNULL(v_total_gastado, 0); -- ifnull para evitar errores
 END;
+-- =============================================================================================================================================================
+	-- 12. ingresos totales en un mes.
+
+CREATE FUNCTION fn_ingresos_por_mes(p_mes INT, p_anio INT)
+RETURNS DECIMAL (14,2)
+DETERMINISTIC 
+READS SQL DATA
+BEGIN
+	DECLARE v_total_ingreso DECIMAL(14,2);
+	SELECT SUM(monto_neto) INTO v_total_ingreso
+	FROM pagos
+	WHERE MONTH(fecha_pago) = p_mes
+		AND YEAR(fecha_pago) = p_anio
+		AND	estado = 'PAGADO';
+	RETURN IFNULL(v_total_ingreso,0.00);
+END;
