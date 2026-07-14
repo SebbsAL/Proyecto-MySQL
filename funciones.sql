@@ -214,3 +214,19 @@ BEGIN
 		AND	estado = 'PAGADO';
 	RETURN IFNULL(v_total_ingreso,0.00);
 END;
+-- =============================================================================================================================================================
+	-- 13. total de ingresos por membresias
+
+CREATE FUNCTION fn_ingresos_por_membresias()
+RETURNS DECIMAL(14,2)
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+	DECLARE v_total_ingreso DECIMAL(14,2);
+	SELECT SUM(pg.monto_neto) INTO v_total_ingreso
+	FROM pagos pg
+	JOIN facturas fc ON fc.id = pg.factura_id
+		WHERE fc.tipo_factura = 'MEMBRESIA'
+			AND pg.estado = 'PAGADO';
+	RETURN IFNULL(v_total_ingreso,0);
+END;
