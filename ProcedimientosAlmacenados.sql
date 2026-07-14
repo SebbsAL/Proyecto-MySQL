@@ -578,3 +578,28 @@ BEGIN
 	END IF;
 END // 
 DELIMITER ;
+-- 3. Generar reporte diario de asistencias
+-- Resume cantidad de ingresos, usuarios unicos y horarios pico
+DELIMITER //
+CREATE PROCEDURE GenerarReporteDiarioAsistencia(
+	IN p_fecha DATE
+)
+BEGIN
+-- Este reporte unico entregara
+-- 1. Total de Ingresos al establecimiento
+-- 2. Cantidad de usuarios unicos que pasaron por el establecimiento
+-- 3. La hora pico
+	SELECT
+		COUNT(*) AS total_ingresos,
+		COUNT(DISTINCT usuario_id) AS usuarios_unicos,
+-- Obtenemos la hora donde hubo mas registros de entrada
+		(SELECT HOUR(hora_entrada)
+		FROM asistencia_logs
+		WHERE fecha = p_fecha
+		GROUP BY HOUR(hora_entrada)
+		ORDER BY COUNT(*) DESC
+		LIMIT 1) AS hora_pico -- Nos entrega unicamente la hora con mas trafico
+	FROM asistencia_logs
+	WHERE fecha = p_fecha; -- Se pasa fecha como parametro para mayor flexibilidad al momento de hacer consultas
+END // 
+DELIMITER ;
