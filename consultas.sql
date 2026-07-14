@@ -519,3 +519,47 @@ WHERE u.id NOT IN (SELECT DISTINCT p.usuario_id FROM pagos p JOIN metodos_pago m
 SELECT
     AVG(total_gastado) AS promedio_gasto
 FROM (SELECT usuario_id, SUM(monto) AS total_gastado FROM pagos WHERE estado = 'PAGADO' GROUP BY usuario_id) AS gastos_usuarios;
+
+-- 51. Mostrar el top 5 de usuarios que más han pagado en total.
+	SELECT
+		CONCAT(us.nombre,' ',us.apellidos) as nombre,
+		SUM(pg.monto_neto) AS total_Pagado
+	FROM usuario us
+	JOIN pagos pg ON pg.usuario_id = us.id
+	WHERE pg.estado = 'PAGADO'
+	GROUP BY us.id
+	ORDER BY total_Pagado DESC
+	LIMIT 5;
+-- 52. Mostrar facturas con monto mayor a $1000.
+	SELECT 
+		numero_factura,
+		fecha_emision,
+		total AS Monto
+	FROM facturas
+	WHERE total > 1000;
+-- 53. Listar pagos realizados después de la fecha de vencimiento.
+	SELECT 
+		pg.id,
+		pg.monto_neto,
+		pg.fecha_pago,
+		fc.fecha_vencimiento
+	FROM pagos pg
+	JOIN facturas fc ON pg.factura_id = fc.id
+	WHERE pg.fecha_pago > fc.fecha_vencimiento
+		AND pg.estado = 'PAGADO';
+-- 54. Calcular el total recaudado en el año actual.
+	SELECT 
+		YEAR(NOW()) AS ANIO_actual,
+		SUM(monto_neto) AS total_recaudado
+		FROM pagos
+		WHERE estado = 'PAGADO'
+			AND YEAR(fecha_pago) = YEAR(NOW());
+-- 55. Mostrar facturas anuladas y su motivo.
+	SELECT
+		numero_factura,
+		tipo_factura,
+		total,
+		estado,
+		motivo_anulacion
+	FROM facturas
+	WHERE estado ='ANULADA';
