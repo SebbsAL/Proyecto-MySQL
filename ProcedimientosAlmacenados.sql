@@ -480,3 +480,21 @@ BEGIN
 	AND notas NOT LIKE '%Recargo por mora%';
 END // 
 DELIMITER ;
+-- 4. Bloquear servicios adicionales por falta de pago
+-- Restringe acceso a servicios premium si existen facturas pendientes
+DELIMITER //
+CREATE PROCEDURE BloquearServiciosPorDeuda()
+BEGIN 
+-- Bloqueamos los servicios de usuarios que tienen facturas vencidas y que tengan un saldo pendiente mayor a cero
+	UPDATE servicios_contratados sc
+	INNER JOIN usuario u ON sc.usuario_id = u.id
+	INNER JOIN facturas f ON u.id = f.usuario_id
+	SET sc.estado = 'BLOQUEADO',
+		sc.fecha_bloqueo = CURRENT_TIMESTAMP(),
+		sc.motivo_bloqueo = 'Bloqueo Moroso: Facturas pendientes por pagar'
+	WHERE sc.estado = 'ACTIVO'
+	AND f.estado = 'PENDIENTE'
+	AND f.saldo_pendiente > 0
+	AND f.fecha_vencimiento < CURRENT_DATE();
+END // 
+DELIMITER ;
