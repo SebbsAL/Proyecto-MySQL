@@ -278,3 +278,23 @@ BEGIN
 		AND usuario_id = p_usuario_id;
 	RETURN v_total_asistencias;
 END;
+
+-- =============================================================================================================================================================
+	-- 17. total de asistencias en un mes
+
+CREATE FUNCTION fn_asistencias_mes(p_usuario_id VARCHAR(36), p_mes INT, p_anio INT)
+RETURNS INT
+DETERMINISTIC
+READS SQL DATA
+BEGIN
+	DECLARE v_total_asistencias INT;
+	SELECT COUNT(id)                     -- cuento los id's q pasen por el WHERE
+	INTO v_total_asistencias
+	FROM accesos
+	WHERE tipo_acceso = 'ENTRADA'   -- verifico entradas ,mes y año 
+		AND MONTH(fecha_hora) = p_mes
+		AND YEAR(fecha_hora) = p_anio
+		AND usuario_id = p_usuario_id;
+	RETURN v_total_asistencias;
+END;
+
