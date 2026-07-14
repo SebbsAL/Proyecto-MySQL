@@ -498,3 +498,53 @@ BEGIN
 	AND f.fecha_vencimiento < CURRENT_DATE();
 END // 
 DELIMITER ;
+-- Accesos y Asistencias
+-- 1. Registrar acceso de usuario (Entrada)
+-- Valida membresia o reserva activa y registra entrada en logs
+DELIMITER //
+CREATE PROCEDURE RegistrarAccesoEntrada(
+	IN p_usuario_id VARCHAR(36),
+	IN p_espacio_id VARCHAR(36)
+)
+BEGIN
+	DECLARE v_es_valido INT DEFAULT 0;
+-- Validamos acceso segun si tiene membresia activa o si tiene una reserva confirmada
+-- Primero verificamos si tiene una membresia activa
+	SELECT COUNT(*) INTO v_es_valido 
+	FROM membresia_usuario
+	WHERE usuario_id = p_usuario_id 
+	AND estado = 'ACTIVA';
+-- Si no tiene membresia, verificamos si tiene una reserva para el dia de hoy
+	IF v_es_valido = 0 THEN
+		SELECT COUNT(*) INTO v_es_valido
+		FROM reservas
+		WHERE usuario_id = p_usuario_id
+		AND espacio_id = p_espacio_id
+		AND fecha_reserva = CURRENT_DATE()
+		AND CURRENT_TIME() BETWEEN hora_inicio AND hora_fin
+		AND estado = 'CONFIRMADA';
+	END IF;
+-- Si no es valido, lanzamos un error bloqueando el acceso
+	IF v_es_valido = 0 THEN
+		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Acceso Denegado: Usuario sin membresia ni reserva confirmada.';
+	ELSE
+-- Si es valido, registramos la entrada en los logs de asistencia
+		INSERT INTO asistencia_logs (
+			id,
+			usuario_id,
+			espacio_id,
+			fecha,
+			hora_entrada,
+			tipo_movimiento
+		) VALUES (
+			UUID(),
+			p_usuario_id,
+			p_espacio_id,
+			CURRENT_DATE(),
+			CURRENT_TIME(),
+			'ENTRADA'
+		);
+		SELECT 'Acceso Permitido' AS mensaje;
+	END IF;
+END // 
+DELIMITER ;
