@@ -149,3 +149,21 @@ BEGIN
 	RETURN v_espacio_id; -- retorno el id
 END;
 
+-- =============================================================================================================================================================
+
+	-- 9. reservas activas del usuario
+
+	CREATE FUNCTION fn_reservas_activas(r_usuario_id VARCHAR(36))
+	RETURNS INT
+	DETERMINISTIC 
+	READS SQL DATA
+	BEGIN
+		DECLARE r_activas INT DEFAULT 0;
+		SELECT COUNT(*) INTO r_activas
+		FROM reservas
+		WHERE usuario_id = r_usuario_id
+			AND estado NOT IN ('CANCELADA','NOSHOW','COMPLETADA');
+		RETURN IFNULL(r_activas,0);
+	END;
+		
+
