@@ -460,3 +460,23 @@ BEGIN
 	SELECT v_numero_factura AS factura_consolidada_generada, v_total_empresa AS monto_total;
 END //
 DELIMITER ;
+-- 3. Aplicar recargos a facturas vencidas
+-- Incrementa el monto de facturas con mas de X dias de atraso
+DELIMITER //
+CREATE PROCEDURE AplicarRecargosMora(
+	IN p_dias_atraso INT,
+	IN p_porcentaje_recargo DECIMAL(5,2)
+)
+BEGIN
+-- Actualizamos todas las facturas que cumplen con la condicion de mora
+-- Para evitar que el recargo se haga mas de una vez, primero se verifica que el saldo no haya sido alterado previamente por recargos de mora
+	UPDATE facturas
+	SET total = total + (total * p_porcentaje_recargo),
+		saldo_pendiente = saldo_pendiente + (total * p_porcentaje_recargo),
+		notas = CONCAT(IFNULL(notas, ''), 'Recargo por mora del ', (p_porcentaje_recargo * 100), '% aplicado el ', CURRENT_DATE())
+	WHERE estado = 'PENDIENTE'
+	AND fecha_vencimiento < DATE_SUB(CURRENT_DATE(), INTERVAL p_dias_atraso DAY)
+-- Evitamos aplicar el recargo por mora multiples veces al verificar si ya tiene la palabra 'Recargo'
+	AND notas NOT LIKE '%Recargo por mora%';
+END // 
+DELIMITER ;
