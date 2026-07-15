@@ -603,3 +603,39 @@ BEGIN
 	WHERE fecha = p_fecha; -- Se pasa fecha como parametro para mayor flexibilidad al momento de hacer consultas
 END // 
 DELIMITER ;
+-- 4. Marcar reservas como "No Show" y generar penalizacion
+-- Detecta reservas confirmadas sin asistencia y aplica cargo automatico
+DELIMITER //
+CREATE PROCEDURE DetectarNoShow()
+BEGIN
+-- Buscamos reservas confirmadas que ya pasaron y que no tienen un registro de entrada en los logs
+-- Usamos un UPDATE con INNER JOIN para marcar el estado
+	UPDATE reservas r
+	LEFT JOIN asistencia_logs al ON r.usuario_id = al.usuario_id
+		AND r.fecha_reserva = al.fecha
+		AND al.tipo_movimiento = 'ENTRADA'
+	SET r.estado = 'NOSHOW',
+		r.motivo_cancelacion = 'NOSHOW detectado por el sistema.'
+	WHERE r.estado = 'CONFIRMADA'
+	AND r.fecha_reserva < CURRENT_DATE() -- Reservas de dias anteriores
+	AND al.id IS NULL; -- No tiene registro de entrada
+-- Se inserta una multa a los que se les marco con su NOSHOW
+	INSERT INTO servicios_contratados (
+		id,
+		usuario_id,
+		concepto,
+		total,
+		estado
+	)
+	SELECT
+		UUID(),
+		usuario_id,
+		CONCAT('Multa por NOSHOW - Reserva: ', id),
+		(precio_final * 0.20), -- Multa del 20% de la Reserva 
+		'ACTIVO'
+	FROM reservas
+	WHERE estado = 'NOSHOW'
+	AND fecha_cancelacion = CURRENT_TIMESTAMP(); -- Se aplica la multa a las reservas de hoy
+	SELECT 'Proceso de deteccion de NOSHOWS finalizado.' AS mensaje;
+END // 
+DELIMITER ;
