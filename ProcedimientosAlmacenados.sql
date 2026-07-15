@@ -700,3 +700,25 @@ BEGIN
 	END IF;
 END // 
 DELIMITER ;
+-- 3. Generar reporte de ingresos mensuales acumulados
+-- Calcula ingresos por mes e ingresos acumulados en el año
+DELIMITER //
+CREATE PROCEDURE GenerarReporteIngresosAnuales(IN p_anio INT)
+BEGIN
+-- Generaremos un reporte mensual que muestra:
+-- 1. El mes
+-- 2. Los ingresos brutos de ese mes
+-- 3. El acumulado anual hasta de ese mes
+	SELECT
+		MONTH(fecha_pago) AS mes,
+		SUM(monto) AS ingresos_mes,
+		(SELECT SUM(monto)
+		FROM pagos
+		WHERE YEAR(fecha_pago) = p_anio
+		AND MONTH(fecha_pago) <= MONTH(p.fecha_pago)) AS acumulado_anual
+	FROM pagos p
+	WHERE YEAR(fecha_pago) = p_anio
+	GROUP BY MONTH(fecha_pago)
+	ORDER BY mes ASC;
+END // 
+DELIMITER ;
