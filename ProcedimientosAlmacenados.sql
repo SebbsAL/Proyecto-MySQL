@@ -676,3 +676,27 @@ BEGIN
 	SELECT 'Empleado y membresia registrados exitosamente' AS mensaje;
 END // 
 DELIMITER ;
+-- 2. Cancelar reservas futuras al eliminar membresia de usuario
+-- Recorre reservas pendientes/confirmadas y las cancela automaticamente
+DELIMITER //
+CREATE PROCEDURE CancelarReservasFuturasUsuario(
+	IN p_usuario_id VARCHAR(36),
+	IN p_motivo VARCHAR(255)
+)
+BEGIN
+-- Marcamos como CANCELADA toda reserva futura para el usuario en especifico
+	UPDATE reservas
+	SET estado = 'CANCELADA',
+		fecha_cancelacion = CURRENT_TIMESTAMP(),
+		motivo_cancelacion = CONCAT('Cancelacion por membresia expirada o eliminada: ', p_motivo)
+	WHERE usuario_id = p_usuario_id
+	AND estado IN ('PÈNDIENTE','CONFIRMADA')
+	AND fecha_reserva >= CURRENT_DATE();
+-- Verificamos si hubo reservas futuras que se cancelaron automaticamente
+	IF ROW_COUNT() > 0 THEN
+		SELECT CONCAT(ROW_COUNT(), 'Las reservas fueron canceladas satisfactoriamente') AS mensaje;
+	ELSE 
+		SELECT 'No habian reservas para cancelar' AS mensaje;
+	END IF;
+END // 
+DELIMITER ;
