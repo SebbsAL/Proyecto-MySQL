@@ -227,11 +227,11 @@ FLUSH PRIVILEGES;
 
 Este proyecto fue desarrollado en colaboración por el equipo de base de datos. A continuación, se detalla la contribución y responsabilidad de cada integrante:
 
-*   **Integrante 1 - [Tu Nombre/Usuario]**: Diseño lógico y físico del esquema relacional DDL, elaboración de datos semilla DML y consultas predefinidas.
-*   **Integrante 2 - [Nombre]**: Desarrollo y optimización de procedimientos almacenados y funciones utilitarias.
-*   **Integrante 3 - [Nombre]**: Lógica y auditoría automatizada a través de Triggers de tabla.
-*   **Integrante 4 - [Nombre]**: Configuración del programador de eventos (`Scheduled Events`) para mantenimiento y limpieza.
-*   **Integrante 5 - [Nombre]**: Esquema de seguridad y roles de usuario, vistas restrictivas y control de Row-Level Security.
+*   **Integrante 1 - [Sergio Aparicio]**: Diseño lógico y físico del esquema relacional DDL, elaboración de datos semilla DML y consultas predefinidas.
+*   **Integrante 2 - [Jhon Henry Reyes]**:  Funciones utilitarias y consultas predefinidas.
+*   **Integrante 3 - [Juan Diego Leon]**: Lógica y auditoría automatizada a través de Triggers de tabla.
+*   **Integrante 4 - [Juan Diego Leon]**: Configuración del programador de eventos (`Scheduled Events`) para mantenimiento y limpieza.
+*   **Integrante 5 - [Sebastian Ayala]**: Desarrollo y optimización de procedimientos almacenados, Esquema de seguridad y roles de usuario, vistas restrictivas y control de Row-Level Security.
 
 ---
 
