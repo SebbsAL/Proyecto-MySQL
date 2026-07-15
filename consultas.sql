@@ -865,3 +865,238 @@ GROUP BY us.id, us.nombre, us.apellidos
 -- Filtramos para quedarnos con quienes hacen más de la mitad de sus visitas en horario nocturno
 HAVING asistencias_noche > (total_asistencias / 2)
 ORDER BY asistencias_noche DESC;                               -- Ordenamos para ver a los más nocturnos primero
+
+
+-- Consultas Avanzadas (20 con subconsultas, joins)
+-- 81. Mostrar los usuarios con el mayor gasto acumulado (subconsulta con SUM;).
+
+SELECT
+    CONCAT(u.nombre, ' ', u.apellidos) AS nombre,
+    (SELECT SUM(monto) FROM pagos WHERE usuario_id = u.id AND estado = 'PAGADO') AS gasto_total
+FROM usuario u
+WHERE u.id IN (SELECT usuario_id FROM pagos WHERE estado = 'PAGADO' GROUP BY usuario_id)
+ORDER BY gasto_total DESC
+LIMIT 1;
+
+-- 82. Mostrar los espacios más ocupados considerando reservas confirmadas y asistencias reales.
+
+SELECT
+    e.id,
+    e.codigo,
+    e.nombre,
+    COUNT(r.id) AS total_reservas_asistidas
+FROM espacios e
+JOIN reservas r ON e.id = r.espacio_id
+JOIN reservas_clientes rc ON r.id = rc.reserva_id
+WHERE r.estado = 'CONFIRMADA'
+    AND rc.asistio = TRUE
+GROUP BY e.id, e.codigo, e.nombre
+ORDER BY total_reservas_asistidas DESC;
+
+-- 83. Calcular el promedio de ingresos por usuario usando subconsultas.
+
+SELECT
+    (SELECT SUM(monto) 
+	FROM pagos 
+	WHERE estado = 'PAGADO') / (SELECT COUNT(DISTINCT id) FROM usuario) AS promedio_ingreso_por_usuario;
+
+-- 84. Listar usuarios que tienen reservas activas y facturas pendientes.
+
+SELECT
+    CONCAT(u.nombre, ' ', u.apellidos) AS nombre
+FROM usuario u
+JOIN reservas r ON u.id = r.usuario_id
+JOIN facturas f ON u.id = f.usuario_id
+WHERE r.estado IN ('PENDIENTE', 'CONFIRMADA')
+    AND f.estado IN ('PENDIENTE', 'PARCIAL');
+
+-- 85. Mostrar empresas cuyos empleados generan más del 20% de los ingresos totales.
+
+SELECT
+    e.nombre,
+    SUM(p.monto) AS total_empresa,
+    (SUM(p.monto) / (SELECT SUM(monto) FROM pagos WHERE estado = 'PAGADO')) * 100 AS porcentaje_contribucion
+FROM empresas e
+JOIN usuario u ON e.id = u.empresa_id
+JOIN pagos p ON u.id = p.usuario_id
+WHERE p.estado = 'PAGADO'
+GROUP BY e.id, e.nombre
+HAVING porcentaje_contribucion > 20.00;
+
+
+-- 86. Mostrar el top 5 de usuarios que más usan servicios adicionales.
+
+SELECT
+    CONCAT(u.nombre, ' ', u.apellidos) AS nombre,
+    COUNT(sc.id) AS total_servicios
+FROM usuario u
+JOIN servicios_contratados sc ON u.id = sc.usuario_id
+WHERE sc.estado = 'USADO'
+GROUP BY u.id, u.nombre, u.apellidos
+ORDER BY total_servicios DESC
+LIMIT 5;
+
+-- 87. Mostrar reservas que generaron facturas mayores al promedio.
+
+SELECT
+    r.codigo,
+    f.numero_factura,
+    f.total
+FROM reservas r
+JOIN detalle_factura df ON r.id = df.referencia_id
+    AND df.referencia_tipo = 'RESERVA'
+JOIN facturas f ON df.factura_id = f.id
+WHERE f.total > (SELECT AVG(total) FROM facturas WHERE tipo_factura = 'RESERVA');
+
+-- 88. Calcular el porcentaje de ocupación global del coworking por mes.
+
+SELECT
+    DATE_FORMAT(r.fecha_reserva, '%Y-%m') AS mes,
+    SUM(r.duracion_horas) AS horas_reservadas,
+    (SUM(r.duracion_horas) / ((SELECT COUNT(id) FROM espacios) * 360.0)) * 100 AS porcentaje_ocupacion
+FROM reservas r
+WHERE r.estado IN ('CONFIRMADA', 'COMPLETADA')
+GROUP BY mes
+ORDER BY mes ASC;
+
+-- 89. Mostrar usuarios que tienen más horas de reserva que el promedio del sistema.
+
+SELECT
+    CONCAT(u.nombre, ' ', u.apellidos) AS nombre,
+    SUM(r.duracion_horas) AS total_horas
+FROM usuario u
+JOIN reservas r ON u.id = r.usuario_id
+GROUP BY u.id, u.nombre, u.apellidos
+HAVING total_horas > (SELECT AVG(total_horas_usuario) FROM (SELECT usuario_id, SUM(duracion_horas) AS total_horas_usuario FROM reservas GROUP BY usuario_id) AS sub);
+
+-- 90. Mostrar el top 3 de salas más usadas en el último trimestre.
+
+SELECT
+    e.id,
+    e.codigo,
+    e.nombre,
+    COUNT(r.id) AS total_usos
+FROM espacios e
+JOIN reservas r ON e.id = r.espacio_id
+JOIN tipos_espacios te ON e.tipo_espacio_id = te.id
+WHERE te.nombre IN ('Sala de Reuniones', 'Sala de Eventos')
+    AND r.fecha_reserva >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
+GROUP BY e.id, e.codigo, e.nombre
+ORDER BY total_usos DESC
+LIMIT 3;
+
+-- 91. Calcular ingresos promedio por tipo de membresía (agrupado con AVG).
+
+SELECT
+    tm.nombre AS membresia,
+    AVG(mu.precio_pagado) AS precio_promedio_pagado
+FROM tipos_membresia tm
+JOIN membresia_usuario mu ON tm.id = mu.tipo_membresia_id
+GROUP BY tm.id, tm.nombre;
+
+-- 92. Mostrar usuarios que pagan solo con un método de pago (subconsulta).
+
+SELECT
+    mp.codigo AS mp_codigo,
+    CONCAT(u.nombre, ' ', u.apellidos) AS nombre
+FROM usuario u
+JOIN (
+    SELECT usuario_id, MIN(metodo_pago_id) AS metodo_pago_id
+    FROM pagos
+    WHERE estado = 'PAGADO'
+    GROUP BY usuario_id
+    HAVING COUNT(DISTINCT metodo_pago_id) = 1
+) p ON u.id = p.usuario_id
+JOIN metodos_pago mp ON p.metodo_pago_id = mp.id;
+
+-- 93. Mostrar reservas canceladas por usuarios que nunca asistieron.
+
+SELECT
+    r.id,
+    r.codigo,
+    CONCAT(u.nombre, ' ', u.apellidos) AS nombre
+FROM reservas r
+JOIN usuario u ON r.usuario_id = u.id
+WHERE r.estado = 'CANCELADA'
+    AND u.id NOT IN (SELECT DISTINCT usuario_id FROM accesos WHERE estado = 'PERMITIDO');
+
+-- 94. Mostrar facturas con pagos parciales y calcular saldo pendiente.
+
+SELECT
+    id,
+    numero_factura,
+    total,
+    saldo_pendiente,
+    (total - saldo_pendiente) AS total_pagado
+FROM facturas
+WHERE estado = 'PARCIAL';
+
+-- 95. Calcular la facturación total de cada empresa y ordenarla de mayor a menor.
+
+SELECT
+    e.nombre AS empresa,
+    SUM(f.total) AS total_facturado
+FROM empresas e
+LEFT JOIN usuario u ON e.id = u.empresa_id
+LEFT JOIN facturas f ON u.id = f.usuario_id
+GROUP BY e.id, e.nombre
+ORDER BY total_facturado DESC;
+
+-- 96. Identificar usuarios que superan en reservas al promedio de su empresa.
+
+SELECT
+    CONCAT(u.nombre, ' ', u.apellidos) AS nombre,
+    u.empresa_id,
+    COUNT(r.id) AS reservas_usuario,
+    (SELECT COUNT(r2.id) / COUNT(DISTINCT u2.id) FROM usuario u2 LEFT JOIN reservas r2 ON u2.id = r2.usuario_id WHERE u2.empresa_id = u.empresa_id) AS promedio_empresa
+FROM usuario u
+JOIN reservas r ON u.id = r.usuario_id
+WHERE u.empresa_id IS NOT NULL
+GROUP BY u.id, u.nombre, u.apellidos, u.empresa_id
+HAVING reservas_usuario > promedio_empresa;
+
+-- 97. Mostrar las 3 empresas con más empleados activos en el coworking.
+
+SELECT
+    e.nombre,
+    COUNT(DISTINCT u.id) AS empleados_activos
+FROM empresas e
+JOIN usuario u ON e.id = u.empresa_id
+JOIN membresia_usuario mu ON u.id = mu.usuario_id
+WHERE mu.estado = 'ACTIVA'
+GROUP BY e.id, e.nombre
+ORDER BY empleados_activos DESC
+LIMIT 3;
+
+-- 98. Calcular el porcentaje de usuarios (tmb re cacorro el que lea esto) activos frente al total de registrados.
+
+SELECT
+    (COUNT(DISTINCT CASE WHEN mu.estado = 'ACTIVA' THEN u.id END) / COUNT(DISTINCT u.id)) * 100 AS porcentaje_activos
+FROM usuario u
+LEFT JOIN membresia_usuario mu ON u.id = mu.usuario_id;
+	
+-- 99. Mostrar ingresos mensuales acumulados con función de ventana (OVER).
+
+SELECT
+    DATE_FORMAT(fecha_pago, '%Y-%m') AS mes,
+    SUM(monto) AS ingresos_mes,
+    SUM(SUM(monto)) OVER (ORDER BY DATE_FORMAT(fecha_pago, '%Y-%m')) AS ingresos_acumulados
+FROM pagos
+WHERE estado = 'PAGADO'
+GROUP BY mes;
+
+-- 100. Mostrar usuarios con más de 10 reservas, más de $500 en facturación y membresía activa (con múltiples joins). abraza penes el q lea esto
+
+SELECT
+    u.id,
+    CONCAT(u.nombre, ' ', u.apellidos) AS nombre
+FROM usuario u
+JOIN membresia_usuario mu ON u.id = mu.usuario_id
+JOIN 
+	(SELECT usuario_id, 
+	COUNT(id) AS total_res 
+	FROM reservas 
+	GROUP BY usuario_id 
+	HAVING total_res > 10) r_count ON u.id = r_count.usuario_id
+JOIN (SELECT usuario_id, SUM(total) AS total_fact FROM facturas WHERE estado = 'PAGADA' GROUP BY usuario_id HAVING total_fact > 500.00) f_sum ON u.id = f_sum.usuario_id
+WHERE mu.estado = 'ACTIVA';
