@@ -242,5 +242,5 @@ Este proyecto se distribuye bajo la licencia **MIT**. Consulte el archivo [LICEN
 
 ### Contacto
 Si tienes dudas o experimentas problemas con la instalación del sistema de base de datos, puedes ponerte en contacto a través de:
-*   **Correo Electrónico:** soporte.coworking@proyecto.com
+*   **Correo Electrónico:** sebbs0610@gmail.com
 *   **Repositorio GitHub:** [https://github.com/SebbsAL/Proyecto-MySQL](https://github.com/SebbsAL/Proyecto-MySQL)
