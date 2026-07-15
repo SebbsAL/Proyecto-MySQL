@@ -5,8 +5,22 @@ USE coworking;
 -- MÓDULO MEMBRESÍAS
 -- 1. Insertar fecha de vencimiento automáticamente
 DELIMITER //
-CREATE TRIGGER trg_mem_vencimiento BEFORE INSERT ON membresia_usuario
-FOR EACH ROW SET NEW.fecha_fin = DATE_ADD(NEW.fecha_inicio, INTERVAL 1 MONTH); -- Funcional
+CREATE TRIGGER trg_mem_calc_vencimiento BEFORE INSERT ON membresia_usuario
+FOR EACH ROW BEGIN
+    DECLARE v_nombre_tipo VARCHAR(30);
+    -- Buscamos el nombre del tipo de membresía según el id que viene en NEW
+    SELECT nombre INTO v_nombre_tipo
+    FROM membresia_usuario mu
+    WHERE tipo_membresia_id = NEW.tipo_membresia_id;
+    -- Según el tipo, calculamos la fecha_fin
+    IF v_nombre_tipo = 'Diaria' THEN
+        SET NEW.fecha_fin = NEW.fecha_inicio;
+    ELSEIF v_nombre_tipo = 'Mensual' THEN
+        SET NEW.fecha_fin = DATE_ADD(NEW.fecha_inicio, INTERVAL 1 MONTH);
+    ELSEIF v_nombre_tipo = 'Anual' THEN
+        SET NEW.fecha_fin = DATE_ADD(NEW.fecha_inicio, INTERVAL 1 YEAR);
+    END IF;
+END //
 DELIMITER ;
 
 -- 2. Actualizar estado a "Activa" al realizar pago exitoso
