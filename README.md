@@ -1,6 +1,6 @@
-# 🏢 Sistema de Gestión de Coworking - Proyecto "Tienda de disfraces"
+# 🏢 Sistema de Gestión de Coworking
 
-Bienvenido al repositorio oficial del **Sistema de Gestión de Coworking (referenciado bajo el nombre clave "Tienda de disfraces")**. Este sistema implementa una base de datos robusta, relacional y altamente automatizada en MySQL para administrar la operación diaria, el control de acceso físico y las finanzas de una red de espacios de trabajo compartido.
+Bienvenido al repositorio oficial del **Sistema de Gestión de Coworking**. Este sistema implementa una base de datos robusta, relacional y altamente automatizada en MySQL para administrar la operación diaria, el control de acceso físico y las finanzas de una red de espacios de trabajo compartido.
 
 ---
 
