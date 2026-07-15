@@ -238,7 +238,7 @@ Este proyecto fue desarrollado en colaboración por el equipo de base de datos. 
 ## 📄 9. Licencia y Contacto
 
 ### Licencia
-Este proyecto se distribuye bajo la licencia **MIT**. Consulte el archivo [LICENSE](file:///LICENSE) para obtener más detalles sobre el uso libre y la distribución comercial.
+Este proyecto se distribuye bajo la licencia **Creative Commons Zero v1.0 Universal**. Consulte el archivo [LICENSE](file:///LICENSE) para obtener más detalles sobre el uso libre y la distribución comercial.
 
 ### Contacto
 Si tienes dudas o experimentas problemas con la instalación del sistema de base de datos, puedes ponerte en contacto a través de:
