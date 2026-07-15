@@ -2,7 +2,7 @@
 -- 1. devuelve true si hay una membresia activa
 CREATE FUNCTION fn_membresia_activa(p_usuario_id VARCHAR(36) )
 RETURNS BOOLEAN
-DETERMINISTIC
+NOT DETERMINISTIC
 READS SQL DATA
 BEGIN
 DECLARE v_activas INT DEFAULT 0; -- variable donde voy a guardar cuántas filas cumplen la condición
@@ -46,7 +46,7 @@ END;
 
 CREATE FUNCTION fn_tipo_membresia(p_usuario_id VARCHAR(36))
 RETURNS VARCHAR(255)
-DETERMINISTIC 
+NOT DETERMINISTIC 
 READS SQL DATA
 BEGIN
 	DECLARE tipoMemb VARCHAR(255);  -- declaro variable para retornar el tipo de memb
@@ -64,7 +64,7 @@ END;
 
 	CREATE FUNCTION fn_renovaciones_membresia(p_usuario_id VARCHAR(36))
 RETURNS INT
-DETERMINISTIC
+NOT DETERMINISTIC
 READS SQL DATA
 BEGIN
     DECLARE v_renovaciones INT DEFAULT 0; -- guarda el número de renovaciones
@@ -82,7 +82,7 @@ END;
 
 CREATE FUNCTION fn_estado_membresia(p_usuario_id VARCHAR(36))
 RETURNS VARCHAR(100)
-DETERMINISTIC
+NOT DETERMINISTIC
 READS SQL DATA
 BEGIN
     DECLARE v_estado VARCHAR(100);
@@ -100,7 +100,7 @@ END;
 
 CREATE FUNCTION fn_total_reservas(r_usuario_id VARCHAR(36))
 RETURNS INT
-DETERMINISTIC 
+NOT DETERMINISTIC 
 READS SQL DATA
 BEGIN
 	DECLARE r_Treservas INT DEFAULT 0;
@@ -116,7 +116,7 @@ END;
 
 CREATE FUNCTION fn_horas_reservadas(p_usuario_id VARCHAR(36), p_mes INT, p_anio INT)
 RETURNS DECIMAL(10,2)
-DETERMINISTIC
+NOT DETERMINISTIC
 READS SQL DATA
 BEGIN
     DECLARE v_horas DECIMAL(10,2) DEFAULT 0; -- extraigo de la tabla la cant de horas q se uso
@@ -135,7 +135,7 @@ END;
 
 CREATE FUNCTION fn_espacio_mas_reservado()
 RETURNS VARCHAR(36)
-DETERMINISTIC
+NOT DETERMINISTIC
 READS SQL DATA
 BEGIN 
 	DECLARE v_espacio_id VARCHAR(36); -- variables para guardar el id y 
@@ -155,7 +155,7 @@ END;
 
 	CREATE FUNCTION fn_reservas_activas(r_usuario_id VARCHAR(36))
 	RETURNS INT
-	DETERMINISTIC 
+	NOT DETERMINISTIC 
 	READS SQL DATA
 	BEGIN
 		DECLARE r_activas INT DEFAULT 0;
@@ -172,7 +172,7 @@ END;
 
 CREATE FUNCTION fn_duracion_promedio_reservas(p_espacio_id VARCHAR(36) )
 RETURNS DECIMAL(5,2)
-DETERMINISTIC
+NOT DETERMINISTIC
 READS SQL DATA
 BEGIN
 	DECLARE v_duracion DECIMAL(5,2);
@@ -188,7 +188,7 @@ END;
 	-- 11.total pagado por un usuario
 CREATE FUNCTION fn_total_pagado(p_usuario_id VARCHAR(36) )
 RETURNS DECIMAL(12,2)
-DETERMINISTIC 
+NOT DETERMINISTIC 
 READS SQL DATA
 BEGIN
 	DECLARE v_total_gastado DECIMAL(12,2); 
@@ -203,7 +203,7 @@ END;
 
 CREATE FUNCTION fn_ingresos_por_mes(p_mes INT, p_anio INT)
 RETURNS DECIMAL (14,2)
-DETERMINISTIC 
+NOT DETERMINISTIC 
 READS SQL DATA
 BEGIN
 	DECLARE v_total_ingreso DECIMAL(14,2);
@@ -219,7 +219,7 @@ END;
 
 CREATE FUNCTION fn_ingresos_por_membresias()
 RETURNS DECIMAL(14,2)
-DETERMINISTIC
+NOT DETERMINISTIC
 READS SQL DATA
 BEGIN
 	DECLARE v_total_ingreso DECIMAL(14,2);
@@ -235,7 +235,7 @@ END;
 
 CREATE FUNCTION fn_ingresos_por_reservas()
 RETURNS DECIMAL(14,2)
-DETERMINISTIC
+NOT DETERMINISTIC
 READS SQL DATA
 BEGIN
 	DECLARE v_total_ingreso DECIMAL(14,2);
@@ -251,7 +251,7 @@ END;
 
 CREATE FUNCTION fn_ingresos_por_empresa(p_empresa_id VARCHAR(36) )
 RETURNS DECIMAL(14,2)
-DETERMINISTIC
+NOT DETERMINISTIC
 READS SQL DATA
 BEGIN
 	DECLARE v_total_ingreso DECIMAL(14,2);
@@ -267,7 +267,7 @@ END;
 
 CREATE FUNCTION fn_total_asistencias(p_usuario_id VARCHAR(36) )
 RETURNS INT
-DETERMINISTIC
+NOT DETERMINISTIC
 READS SQL DATA
 BEGIN
 	DECLARE v_total_asistencias INT;
@@ -284,7 +284,7 @@ END;
 
 CREATE FUNCTION fn_asistencias_mes(p_usuario_id VARCHAR(36), p_mes INT, p_anio INT)
 RETURNS INT
-DETERMINISTIC
+NOT DETERMINISTIC
 READS SQL DATA
 BEGIN
 	DECLARE v_total_asistencias INT;
@@ -303,7 +303,7 @@ END;
 
 CREATE FUNCTION fn_top_usuario_asistencias()
 RETURNS	VARCHAR(155)
-DETERMINISTIC
+NOT DETERMINISTIC
 READS SQL DATA
 BEGIN
 	DECLARE v_id_usuario VARCHAR(36);  -- guardar id del usuario q mas asistio
@@ -322,7 +322,7 @@ END;
 
 CREATE FUNCTION fn_ultima_asistencia(p_usuario_id VARCHAR(36))
 RETURNS DATETIME
-DETERMINISTIC
+NOT DETERMINISTIC
 READS SQL DATA
 BEGIN
     DECLARE v_ultima_fecha DATETIME; -- guarda la fecha/hora más reciente de acceso
@@ -341,7 +341,7 @@ END;
 
 CREATE FUNCTION fn_promedio_asistencias()
 RETURNS DECIMAL(10,2)
-DETERMINISTIC
+NOT DETERMINISTIC
 READS SQL DATA
 BEGIN
     DECLARE v_total_entradas INT DEFAULT 0; -- total de asistencias registradas
