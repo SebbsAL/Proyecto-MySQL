@@ -639,3 +639,40 @@ BEGIN
 	SELECT 'Proceso de deteccion de NOSHOWS finalizado.' AS mensaje;
 END // 
 DELIMITER ;
+-- Corporativos y Administracion
+-- 1. Registrar lote de empleados de una empresa con membresia corporativa
+-- Insertar varios usuarios vinculados a una empresa y les asigna membresia
+DELIMITER //
+CREATE PROCEDURE RegistrarLoteEmpleados(
+	IN p_empresa_id VARCHAR(36),
+	IN p_nombre_empleado VARCHAR(100),
+	IN p_email_empleado VARCHAR(100),
+	IN p_membresia_tipo_id VARCHAR(36)
+)
+BEGIN
+	DECLARE v_usuario_id VARCHAR(36);
+	DECLARE v_membresia_id VARCHAR(36);
+-- Primero, creamos el usuario
+	SET v_usuario_id = UUID();
+	INSERT INTO usuario (id, nombre, email, empresa_id, rol)
+	VALUES (v_usuario_id, p_nombre_empleado, p_email_empleado, p_empresa_id, 'EMPLEADO');
+-- Ahora asignamos la membresia corporativa al nuevo usuario
+	SET v_membresia_id = UUID();
+	INSERT INTO membresia_usuario (
+		id,
+		usuario_id,
+		membresia_tipo_id,
+		estado,
+		fecha_inicio,
+		fecha_fin
+	) VALUES (
+		v_membresia_id,
+		v_usuario_id,
+		p_membresia_tipo_id,
+		'ACTIVA',
+		CURRENT_DATE(),
+		DATE_ADD(CURRENT_DATE(), INTERVAL 1 MONTH) -- Membresia mensual por defecto
+	);
+	SELECT 'Empleado y membresia registrados exitosamente' AS mensaje;
+END // 
+DELIMITER ;
