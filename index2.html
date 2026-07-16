@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Coworking - Documentación SQL Completa</title>
+    <!-- Google Fonts: Outfit & Fira Code -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: #eff6ff;
+            --success: #10b981;
+            --success-hover: #059669;
+            --success-light: #ecfdf5;
+            --dark-bg: #0f172a;
+            --dark-card: #1e293b;
+            --light-bg: #f8fafc;
+            --border: #e2e8f0;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --text-light: #f8fafc;
+            --sidebar-width: 280px;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--light-bg);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--dark-bg);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0; bottom: 0; left: 0;
+            z-index: 100;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            transition: var(--transition);
+        }
+        
+        .sidebar-brand {
+            padding: 24px;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .sidebar-brand h2 { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.5px; color: #ffffff; line-height: 1.2; }
+        .sidebar-brand p { font-size: 0.75rem; color: #64748b; margin: 0; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .sidebar-menu { list-style: none; padding: 16px 8px; overflow-y: auto; flex-grow: 1; }
+        .sidebar-item { margin-bottom: 4px; }
+        
+        .sidebar-link {
+            display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+            color: #94a3b8; text-decoration: none; border-radius: 8px;
+            font-size: 0.95rem; font-weight: 500; cursor: pointer;
+            transition: var(--transition); border: none; background: none; width: 100%; text-align: left;
+        }
+        .sidebar-link:hover { color: #ffffff; background-color: rgba(255, 255, 255, 0.05); }
+        .sidebar-link.active { color: #ffffff; background-color: var(--primary); box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); }
+        
+        .sidebar-footer {
+            padding: 16px 24px; font-size: 0.8rem; color: #475569;
+            border-top: 1px solid rgba(255, 255, 255, 0.08); background-color: #090d16;
+        }
+        
+        .main-content {
+            margin-left: var(--sidebar-width); flex-grow: 1; min-height: 100vh;
+            display: flex; flex-direction: column; transition: var(--transition);
+        }
+        
+        .top-navbar {
+            height: 70px; background-color: #ffffff; border-bottom: 1px solid var(--border);
+            display: none; align-items: center; justify-content: space-between;
+            padding: 0 24px; position: sticky; top: 0; z-index: 90;
+        }
+        .mobile-menu-btn { background: none; border: none; color: var(--text-main); font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .top-navbar-title { font-weight: 700; font-size: 1.1rem; color: var(--dark-bg); }
+        
+        .content-container { padding: 40px; max-width: 1200px; width: 100%; margin: 0 auto; flex-grow: 1; }
+        
+        .tab-panel { display: none; animation: fadeIn 0.4s ease forwards; }
+        .tab-panel.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .header-banner-tab {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #ffffff; padding: 35px 30px; border-radius: 12px; margin-bottom: 30px;
+            border-bottom: 4px solid var(--primary); box-shadow: 0 4px 15px rgba(15, 23, 42, 0.08);
+        }
+        #section-1 .header-banner-tab { border-bottom-color: #8b5cf6; } 
+        #section-2 .header-banner-tab { border-bottom-color: #2563eb; } 
+        #section-3 .header-banner-tab { border-bottom-color: #f59e0b; } 
+        #section-4 .header-banner-tab { border-bottom-color: #10b981; } 
+        #section-5 .header-banner-tab { border-bottom-color: #ec4899; } 
+        #section-6 .header-banner-tab { border-bottom-color: #ef4444; } 
+        #section-7 .header-banner-tab { border-bottom-color: #8b5cf6; } 
+        #section-8 .header-banner-tab { border-bottom-color: #14b8a6; } 
+        
+        .header-banner-tab h1 { color: #ffffff; font-size: 1.8rem; margin-bottom: 6px; font-weight: 700; }
+        .header-banner-tab .subtitle { font-size: 1rem; color: #94a3b8; font-weight: 400; }
+        
+        h1 { font-size: 2.2rem; font-weight: 800; color: var(--dark-bg); margin-bottom: 12px; letter-spacing: -0.5px; }
+        h2 { font-size: 1.4rem; color: var(--dark-bg); margin-top: 36px; margin-bottom: 16px; font-weight: 700; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+        h3 { font-size: 1.15rem; color: #1e3a8a; margin-top: 26px; margin-bottom: 12px; font-weight: 600; }
+        h4 { font-size: 1rem; color: var(--primary-hover); margin-top: 18px; margin-bottom: 8px; font-weight: 600; }
+        p { margin-bottom: 14px; line-height: 1.65; color: #334155; font-size: 0.95rem; text-align: justify; }
+        ul, ol { margin-bottom: 14px; padding-left: 24px; }
+        li { margin-bottom: 6px; line-height: 1.6; color: #334155; font-size: 0.95rem; }
+        
+        .index-hero {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #ffffff; padding: 50px 40px; border-radius: 16px; margin-bottom: 35px;
+            border-bottom: 5px solid var(--primary); position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+        }
+        .index-hero h1 { color: #ffffff; font-size: 2.3rem; margin-bottom: 12px; }
+        .index-hero p { color: #94a3b8; font-size: 1.1rem; max-width: 800px; margin-bottom: 0; line-height: 1.6; text-align: left; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; margin-bottom: 35px; }
+        .stat-card {
+            background-color: #ffffff; border: 1px solid var(--border); border-radius: 12px;
+            padding: 16px 12px; text-align: center; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02); transition: var(--transition);
+        }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0, 0, 0, 0.05); border-color: var(--primary); }
+        .stat-number { font-size: 1.8rem; font-weight: 800; color: var(--primary); line-height: 1.2; margin-bottom: 2px; }
+        .stat-label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 20px; }
+        .doc-card {
+            background-color: #ffffff; border: 1px solid var(--border); border-radius: 12px;
+            padding: 24px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02); display: flex;
+            flex-direction: column; transition: var(--transition); cursor: pointer;
+            position: relative; overflow: hidden; text-align: left;
+        }
+        .doc-card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+            background-color: var(--primary); opacity: 0; transition: var(--transition);
+        }
+        .doc-card:hover { transform: translateY(-5px); box-shadow: 0 12px 20px rgba(0, 0, 0, 0.06); border-color: rgba(37, 99, 235, 0.25); }
+        .doc-card:hover::before { opacity: 1; }
+        .doc-card-icon { font-size: 1.8rem; margin-bottom: 12px; display: inline-block; }
+        .doc-card-title { font-size: 1.15rem; font-weight: 700; color: var(--dark-bg); margin-bottom: 8px; }
+        .doc-card-desc { font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px; flex-grow: 1; }
+        .doc-card-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 8px 16px; background-color: var(--primary-light); color: var(--primary);
+            border: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem;
+            align-self: flex-start; transition: var(--transition);
+        }
+        .doc-card:hover .doc-card-btn { background-color: var(--primary); color: #ffffff; }
+        
+        .stats-box {
+            background-color: var(--primary-light); border-left: 4px solid var(--primary);
+            padding: 16px 20px; margin: 20px 0; border-radius: 0 10px 10px 0;
+        }
+        .stats-box h4 { margin-top: 0; color: #1e3a8a; font-size: 1.05rem; margin-bottom: 8px; }
+        .stats-box ul { margin-bottom: 0; }
+        .stats-box li { font-size: 0.9rem; color: #1e3a8a; margin-bottom: 4px; }
+        
+        table {
+            width: 100%; border-collapse: separate; border-spacing: 0; margin: 20px 0;
+            background-color: #ffffff; border-radius: 8px; overflow: hidden;
+            border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01);
+        }
+        th {
+            background-color: var(--dark-bg); color: #ffffff; font-weight: 600;
+            font-size: 0.85rem; padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        td {
+            padding: 9px 12px; font-size: 0.82rem; border-bottom: 1px solid var(--border);
+            color: #334155; vertical-align: top;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:nth-child(even) td { background-color: #f8fafc; }
+        tr:hover td { background-color: #f1f5f9; }
+        
+        pre {
+            background-color: var(--dark-bg); color: #f8fafc; padding: 16px;
+            border-radius: 8px; overflow-x: auto; margin: 16px 0;
+            border-left: 4px solid var(--primary); line-height: 1.5; position: relative;
+        }
+        pre, code { font-family: 'Fira Code', 'Consolas', monospace; font-size: 0.82rem; }
+        code { background-color: #e2e8f0; color: var(--dark-bg); padding: 2px 5px; border-radius: 4px; font-size: 0.85em; font-weight: 500; }
+        pre code { background-color: transparent; color: inherit; padding: 0; border-radius: 0; font-size: inherit; display: block; }
+        
+        .copy-btn {
+            position: absolute; top: 8px; right: 8px; background-color: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15); color: #cbd5e1; padding: 4px 8px;
+            border-radius: 4px; font-size: 0.7rem; font-weight: 600; cursor: pointer;
+            transition: var(--transition); display: flex; align-items: center; gap: 4px; user-select: none;
+        }
+        .copy-btn:hover { background-color: rgba(255, 255, 255, 0.15); color: #ffffff; border-color: rgba(255, 255, 255, 0.3); }
+        .copy-btn.copied { background-color: var(--success); color: #ffffff; border-color: var(--success); }
+
+        /* ==========================================
+           ESTILOS VIVOS PARA PALABRAS RESERVADAS SQL
+           ========================================== */
+        .sql-kw {
+            font-weight: 700;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            display: inline-block;
+        }
+
+        /* Efecto hover para interactividad */
+        .sql-kw:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.15);
+        }
+
+        /* Palabras clave dentro de celdas de tabla y elementos claros */
+        td .sql-kw, th .sql-kw, p .sql-kw, li .sql-kw {
+            color: #ffffff;
+            background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%);
+            padding: 2px 6px;
+            box-shadow: 0 2px 6px rgba(124, 58, 237, 0.35);
+            font-size: 0.95em;
+            letter-spacing: 0.3px;
+        }
+
+        /* Palabras clave dentro de etiquetas <code> en línea (ej. en las tablas) */
+        code .sql-kw {
+            color: #ffffff !important;
+            background: linear-gradient(135deg, #2563eb 0%, #06b6d4 100%) !important;
+            padding: 2px 6px !important;
+            border-radius: 4px !important;
+            box-shadow: 0 2px 6px rgba(6, 182, 212, 0.4) !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* Palabras clave dentro de bloques de código oscuros (<pre>) */
+        pre code .sql-kw {
+            color: #22d3ee !important; /* Cian Neón */
+            background: transparent !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            text-shadow: 0 0 8px rgba(34, 211, 238, 0.7);
+            font-weight: 700;
+        }
+        
+        @media (max-width: 992px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; height: 100vh; position: fixed; transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .top-navbar { display: flex; }
+            .content-container { padding: 24px 16px; }
+            .index-hero { padding: 32px 20px; }
+            .index-hero h1 { font-size: 1.8rem; }
+            .index-hero p { font-size: 0.95rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <h2>Gestión de Coworking</h2>
+            <p>Documentación SQL</p>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="sidebar-item">
+                <button class="sidebar-link active" onclick="switchTab('index-tab')">
+                    <span>🏠</span> Índice General
+                </button>
+            </li>
+            <li class="sidebar-item">
+                <button class="sidebar-link" onclick="switchTab('section-1')">
+                    <span>📚</span> Guía de Estudio SQL
+                </button>
+            </li>
+            <li class="sidebar-item">
+                <button class="sidebar-link" onclick="switchTab('section-2')">
+                    <span>📊</span> Estructura y Doc
+                </button>
+            </li>
+            <li class="sidebar-item">
+                <button class="sidebar-link" onclick="switchTab('section-3')">
+                    <span>🎓</span> Guía SQL Maestra
+                </button>
+            </li>
+            <li class="sidebar-item">
+                <button class="sidebar-link" onclick="switchTab('section-4')">
+                    <span>⚙️</span> Stored Procedures
+                </button>
+            </li>
+            <li class="sidebar-item">
+                <button class="sidebar-link" onclick="switchTab('section-5')">
+                    <span>🛠️</span> Funciones UDF
+                </button>
+            </li>
+            <li class="sidebar-item">
+                <button class="sidebar-link" onclick="switchTab('section-6')">
+                    <span>⚡</span> Triggers
+                </button>
+            </li>
+            <li class="sidebar-item">
+                <button class="sidebar-link" onclick="switchTab('section-7')">
+                    <span>📅</span> Eventos Programados
+                </button>
+            </li>
+            <li class="sidebar-item">
+                <button class="sidebar-link" onclick="switchTab('section-8')">
+                    <span>🔐</span> Roles y RBAC
+                </button>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            Base de Datos MySQL v8.0<br>© 2026 Coworking DB
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <div class="top-navbar">
+            <span class="top-navbar-title">Coworking SQL Doc</span>
+            <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+        </div>
+
+        <div class="content-container">
+            
+            <!-- Index Tab -->
+            <section class="tab-panel active" id="index-tab">
+                <div class="index-hero">
+                    <h1>📖 Documentación SQL Maestra</h1>
+                    <p>
+                        Bienvenido al portal interactivo de la base de datos para el <strong>Sistema de Gestión de Coworking</strong>. Aquí encontrarás el esquema relacional, guías de desarrollo, automatizaciones, inventarios técnicos y la guía de estudio de palabras reservadas unificados.
+                    </p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-number">31</div><div class="stat-label">Tablas</div></div>
+                    <div class="stat-card"><div class="stat-number">4</div><div class="stat-label">Vistas RLS</div></div>
+                    <div class="stat-card"><div class="stat-number">20</div><div class="stat-label">S. Procedures</div></div>
+                    <div class="stat-card"><div class="stat-number">20</div><div class="stat-label">Funciones UDF</div></div>
+                    <div class="stat-card"><div class="stat-number">13</div><div class="stat-label">Triggers</div></div>
+                    <div class="stat-card"><div class="stat-number">20</div><div class="stat-label">Eventos</div></div>
+                    <div class="stat-card"><div class="stat-number">5</div><div class="stat-label">Roles</div></div>
+                </div>
+
+                <h2>Secciones del Proyecto</h2>
+                <p>Usa la barra lateral o haz clic en las siguientes tarjetas para explorar los módulos de documentación técnica:</p>
+
+                <div class="cards-grid">
+                    <div class="doc-card" onclick="switchTab('section-1')">
+                        <span class="doc-card-icon">📚</span>
+                        <h3 class="doc-card-title">Guía de Estudio SQL</h3>
+                        <p class="doc-card-desc">88 palabras reservadas analizadas por categorías funcionales, con teoría, sintaxis y ejemplos reales extraídos del proyecto Coworking.</p>
+                        <button class="doc-card-btn">Ver Sección →</button>
+                    </div>
+                    <div class="doc-card" onclick="switchTab('section-2')">
+                        <span class="doc-card-icon">📊</span>
+                        <h3 class="doc-card-title">Estructura y Doc</h3>
+                        <p class="doc-card-desc">Esquema de base de datos normalizado en 3FN. Resumen ejecutivo, inventario de tablas, dependencias y justificación de diseño.</p>
+                        <button class="doc-card-btn">Ver Sección →</button>
+                    </div>
+                    <div class="doc-card" onclick="switchTab('section-3')">
+                        <span class="doc-card-icon">🎓</span>
+                        <h3 class="doc-card-title">Guía SQL Maestra</h3>
+                        <p class="doc-card-desc">Consultas SQL optimizadas agrupadas por niveles: DDL/DML básico, agregaciones avanzadas, subconsultas complejas y JOINS.</p>
+                        <button class="doc-card-btn">Ver Sección →</button>
+                    </div>
+                    <div class="doc-card" onclick="switchTab('section-4')">
+                        <span class="doc-card-icon">⚙️</span>
+                        <h3 class="doc-card-title">Stored Procedures</h3>
+                        <p class="doc-card-desc">Automatización de lógica de negocio compleja mediante procedimientos almacenados con control de transacciones y manejo de errores.</p>
+                        <button class="doc-card-btn">Ver Sección →</button>
+                    </div>
+                    <div class="doc-card" onclick="switchTab('section-5')">
+                        <span class="doc-card-icon">🛠️</span>
+                        <h3 class="doc-card-title">Funciones UDF</h3>
+                        <p class="doc-card-desc">Funciones escalares y utilitarias personalizadas para cálculos financieros, formateo de texto y operaciones con fechas.</p>
+                        <button class="doc-card-btn">Ver Sección →</button>
+                    </div>
+                    <div class="doc-card" onclick="switchTab('section-6')">
+                        <span class="doc-card-icon">⚡</span>
+                        <h3 class="doc-card-title">Triggers</h3>
+                        <p class="doc-card-desc">Auditoría en tiempo real, validaciones complejas antes y después de inserciones/actualizaciones y consistencia referencial.</p>
+                        <button class="doc-card-btn">Ver Sección →</button>
+                    </div>
+                    <div class="doc-card" onclick="switchTab('section-7')">
+                        <span class="doc-card-icon">📅</span>
+                        <h3 class="doc-card-title">Eventos Programados</h3>
+                        <p class="doc-card-desc">Automatización de tareas de mantenimiento diario, semanal y mensual: limpieza de logs, reportes y archivado de datos.</p>
+                        <button class="doc-card-btn">Ver Sección →</button>
+                    </div>
+                    <div class="doc-card" onclick="switchTab('section-8')">
+                        <span class="doc-card-icon">🔐</span>
+                        <h3 class="doc-card-title">Roles y RBAC</h3>
+                        <p class="doc-card-desc">Definición y asignación de roles lógicos de seguridad, vistas de seguridad específicas (RLS) y restricciones de privilegios.</p>
+                        <button class="doc-card-btn">Ver Sección →</button>
+                    </div>
+                </div>
+            </section>
+    
+            <!-- Section 1: Guía de Estudio de Palabras Reservadas -->
+            <section class="tab-panel" id="section-1">
+                <div class="header-banner-tab">
+                    <h1>📚 Guía de Estudio de Palabras Reservadas en SQL</h1>
+                    <div class="subtitle">Caso de Estudio Práctico: Sistema de Gestión de Coworking • 88 Palabras Clave</div>
+                </div>
+                <div class="document-body">
+                    <div class="stats-box" style="background-color: #eff6ff; border-left-color: #2563eb;">
+                        <h4 style="color: #1e3a8a;">💡 ¿Cómo estudiar esta guía?</h4>
+                        <p style="color: #1e3a8a; margin-bottom: 0;">Las palabras clave están organizadas por categorías funcionales. Cada una incluye su significado teórico, cómo se usa en general en la sintaxis SQL y ejemplos reales extraídos directamente de tus documentos del coworking para que asocies la teoría con la práctica del ejercicio.</p>
+                    </div>
+
+                    <h2>1. Agrupamiento y Ordenación</h2>
+                    <table>
+                        <thead><tr><th>Palabra Clave</th><th>Frec.</th><th>Función y Propósito (Teoría)</th><th>Sintaxis General</th><th>Uso en este Ejercicio (Ejemplo Real)</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>ASC</code></td><td>8</td><td>Ordena los resultados de manera ascendente (de menor a mayor, A-Z). Es el comportamiento por defecto.</td><td><code>ORDER BY columna ASC</code></td><td><code>ORDER BY fecha_ingreso ASC</code> (coworking.sql:751)</td></tr>
+                            <tr><td><code>BY</code></td><td>134</td><td>Se utiliza en combinación con GROUP (GROUP BY) u ORDER (ORDER BY).</td><td><code>GROUP BY...</code> <code>ORDER BY...</code></td><td><code>GROUP BY tm.id, tm.nombre;</code> (coworking.sql:741)</td></tr>
+                            <tr><td><code>DESC</code></td><td>24</td><td>Ordena los resultados de manera descendente (de mayor a menor, Z-A).</td><td><code>ORDER BY columna DESC</code></td><td><code>ORDER BY total_reservas DESC</code> (coworking.sql:949)</td></tr>
+                            <tr><td><code>GROUP</code></td><td>100</td><td>Parte de GROUP BY. Agrupa registros que comparten valores en las columnas indicadas para funciones de agregación.</td><td><code>GROUP BY col1, col2</code></td><td><code>GROUP BY tm.id, tm.nombre;</code> (coworking.sql:741)</td></tr>
+                            <tr><td><code>HAVING</code></td><td>38</td><td>Filtra los grupos resultantes del GROUP BY. Similar a WHERE, pero opera sobre valores agrupados y agregados.</td><td><code>GROUP BY... HAVING COUNT(*) > 5</code></td><td><code>HAVING total_reservas > 5;</code> (coworking.sql:790)</td></tr>
+                            <tr><td><code>LIMIT</code></td><td>22</td><td>Limita el número máximo de registros que retornará la consulta.</td><td><code>LIMIT numero_filas</code></td><td><code>LIMIT 10;</code> (coworking.sql:752)</td></tr>
+                            <tr><td><code>ORDER</code></td><td>38</td><td>Parte de ORDER BY. Ordena el conjunto de resultados retornado por la consulta.</td><td><code>ORDER BY columna [ASC|DESC]</code></td><td><code>ORDER BY fecha_ingreso ASC</code> (coworking.sql:751)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h2>2. DCL (Control de Accesos y Seguridad)</h2>
+                    <table>
+                        <thead><tr><th>Palabra Clave</th><th>Frec.</th><th>Función y Propósito (Teoría)</th><th>Sintaxis General</th><th>Uso en este Ejercicio (Ejemplo Real)</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>GRANT</code></td><td>66</td><td>Otorga privilegios o permisos específicos sobre objetos de la BD a usuarios o roles.</td><td><code>GRANT permisos ON objetos TO destino;</code></td><td><code>GRANT ALL PRIVILEGES ON coworking.* TO 'Administrador_Coworking';</code></td></tr>
+                            <tr><td><code>PRIVILEGES</code></td><td>2</td><td>Especifica que la instrucción se refiere a permisos/privilegios de base de datos.</td><td><code>GRANT ALL PRIVILEGES ON ...</code></td><td><code>GRANT ALL PRIVILEGES ON coworking.* TO 'Administrador_Coworking';</code></td></tr>
+                            <tr><td><code>ROLE</code></td><td>2</td><td>Crea o gestiona un Rol, conjunto con nombre de privilegios que se pueden asignar a usuarios.</td><td><code>CREATE ROLE nombre_rol;</code></td><td><code>CREATE ROLE IF NOT EXISTS 'Administrador_Coworking'...;</code></td></tr>
+                            <tr><td><code>TO</code></td><td>66</td><td>Determina los usuarios o roles destinatarios de los privilegios otorgados mediante GRANT.</td><td><code>GRANT privilegios TO usuario;</code></td><td><code>GRANT ALL PRIVILEGES ON coworking.* TO 'Administrador_Coworking';</code></td></tr>
+                        </tbody>
+                    </table>
+
+                    <h2>3. DCL y Consultas</h2>
+                    <table>
+                        <thead><tr><th>Palabra Clave</th><th>Frec.</th><th>Función y Propósito (Teoría)</th><th>Sintaxis General</th><th>Uso en este Ejercicio (Ejemplo Real)</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>ALL</code></td><td>2</td><td>En GRANT, indica que se otorgan todos los privilegios posibles. En WHERE, evalúa si todas las condiciones en un subquery son verdaderas.</td><td><code>GRANT ALL PRIVILEGES...</code> <code>WHERE v > ALL(subquery)</code></td><td><code>GRANT ALL PRIVILEGES ON coworking.* TO 'Administrador_Coworking';</code></td></tr>
+                        </tbody>
+                    </table>
+
+                    <h2>4. DDL (Definición de Datos)</h2>
+                    <table>
+                        <thead><tr><th>Palabra Clave</th><th>Frec.</th><th>Función y Propósito (Teoría)</th><th>Sintaxis General</th><th>Uso en este Ejercicio (Ejemplo Real)</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>ALTER</code></td><td>0</td><td>Modifica la estructura de un objeto existente (añadir/eliminar columnas, cambiar tipos, etc.).</td><td><code>ALTER TABLE tabla ADD COLUMN col tipo;</code></td><td>N/A (Identificado en estándar)</td></tr>
+                            <tr><td><code>CHARACTER</code></td><td>2</td><td>Define el conjunto de caracteres (charset) que usará una BD o tabla para almacenar texto.</td><td><code>CHARACTER SET utf8mb4</code></td><td><code>CHARACTER SET utf8mb4</code> (coworking.sql:3)</td></tr>
+                            <tr><td><code>COLLATE</code></td><td>2</td><td>Establece el ordenamiento y comparación de caracteres (colación).</td><td><code>COLLATE utf8mb4_unicode_ci</code></td><td><code>COLLATE utf8mb4_unicode_ci;</code> (coworking.sql:4)</td></tr>
+                            <tr><td><code>CREATE</code></td><td>382</td><td>Crea nuevos objetos en la BD (tablas, índices, bases de datos, triggers, procedimientos, roles, etc.).</td><td><code>CREATE TABLE/DATABASE/INDEX...</code></td><td><code>CREATE TABLE IF NOT EXISTS empresas(</code> (coworking.sql:7)</td></tr>
+                            <tr><td><code>DATABASE</code></td><td>4</td><td>Indica que el objeto a crear, eliminar o alterar es una base de datos.</td><td><code>CREATE DATABASE nombre;</code> <code>DROP DATABASE nombre;</code></td><td><code>DROP DATABASE IF EXISTS coworking;</code> (coworking.sql:1)</td></tr>
+                            <tr><td><code>DROP</code></td><td>2</td><td>Elimina físicamente objetos de la BD de forma permanente.</td><td><code>DROP DATABASE/TABLE/INDEX...</code></td><td><code>DROP DATABASE IF EXISTS coworking;</code> (coworking.sql:1)</td></tr>
+                            <tr><td><code>INDEX</code></td><td>196</td><td>Crea un índice en una o más columnas para acelerar las búsquedas de registros en las tablas.</td><td><code>CREATE INDEX idx ON tabla(col);</code></td><td><code>CREATE INDEX idx_usuario_estado ON usuario(estado);</code> (coworking.sql:63)</td></tr>
+                            <tr><td><code>TABLE</code></td><td>62</td><td>Indica que el objeto a crear, eliminar o modificar es una tabla.</td><td><code>CREATE TABLE nombre (...);</code></td><td><code>CREATE TABLE IF NOT EXISTS empresas(</code> (coworking.sql:7)</td></tr>
+                            <tr><td><code>USE</code></td><td>4</td><td>Selecciona la base de datos por defecto para todas las consultas subsiguientes.</td><td><code>USE nombre_bd;</code></td><td><code>USE coworking;</code> (coworking.sql:5)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h2>5. DML (Manipulación de Datos)</h2>
+                    <table>
+                        <thead><tr><th>Palabra Clave</th><th>Frec.</th><th>Función y Propósito (Teoría)</th><th>Sintaxis General</th><th>Uso en este Ejercicio (Ejemplo Real)</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>AS</code></td><td>278</td><td>Asigna un alias temporal a una columna o tabla para facilitar su lectura o uso en la consulta.</td><td><code>SELECT col AS alias</code></td><td><code>CONCAT(nombre, ' ', apellidos) AS nombre,</code> (coworking.sql:708)</td></tr>
+                            <tr><td><code>DELETE</code></td><td>22</td><td>Elimina registros de una tabla. También usado en restricción referencial ON DELETE de claves foráneas.</td><td><code>DELETE FROM tabla WHERE cond;</code> <code>ON DELETE SET NULL</code></td><td><code>FOREIGN KEY(reserva_id) REFERENCES reservas(id) ON DELETE SET NULL</code> (coworking.sql:203)</td></tr>
+                            <tr><td><code>FROM</code></td><td>288</td><td>Indica la tabla de origen o subconsulta de donde se leerán o borrarán los datos.</td><td><code>SELECT * FROM tabla;</code></td><td><code>FROM usuario;</code> (coworking.sql:712)</td></tr>
+                            <tr><td><code>INSERT</code></td><td>236</td><td>Agrega uno o varios registros nuevos a una tabla de la base de datos.</td><td><code>INSERT INTO tabla(cols) VALUES(...);</code></td><td><code>BEFORE INSERT ON membresia_usuario</code> (coworking.sql:1709)</td></tr>
+                            <tr><td><code>SELECT</code></td><td>352</td><td>Especifica las columnas o expresiones a consultar y retornar desde la base de datos.</td><td><code>SELECT columnas FROM tabla;</code></td><td><code>SELECT...</code> (coworking.sql:705)</td></tr>
+                            <tr><td><code>UPDATE</code></td><td>88</td><td>Modifica los valores de una o varias columnas de registros existentes en una tabla.</td><td><code>UPDATE tabla SET col = val WHERE cond;</code></td><td><code>UPDATE membresia_usuario mu</code> (coworking.sql:1723)</td></tr>
+                            <tr><td><code>VALUES</code></td><td>172</td><td>Introduce la lista de valores a insertar dentro de una sentencia INSERT.</td><td><code>INSERT INTO tabla VALUES (v1, v2);</code></td><td><code>VALUES(UUID(), NEW.id, NEW.usuario_id...);</code> (coworking.sql:1750)</td></tr>
+                            <tr><td><code>WHERE</code></td><td>282</td><td>Filtra los registros o filas de una consulta en función de condiciones lógicas.</td><td><code>SELECT * FROM tabla WHERE cond;</code></td><td><code>WHERE mu.estado = 'ACTIVA';</code> (coworking.sql:719)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h2>6. DML y Procedimientos</h2>
+                    <table>
+                        <thead><tr><th>Palabra Clave</th><th>Frec.</th><th>Función y Propósito (Teoría)</th><th>Sintaxis General</th><th>Uso en este Ejercicio (Ejemplo Real)</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>INTO</code></td><td>214</td><td>Especifica la tabla destino en INSERT o la variable local donde se guarda el resultado de SELECT INTO.</td><td><code>INSERT INTO tabla...</code> <code>SELECT col INTO var...</code></td><td><code>SELECT duracion_dias INTO dias FROM tipos_membresia...;</code> (coworking.sql:1713)</td></tr>
+                            <tr><td><code>SET</code></td><td>96</td><td>Asigna valores a columnas en UPDATE o a variables locales en procedimientos y triggers.</td><td><code>UPDATE t SET col = val;</code> <code>SET var = val;</code></td><td><code>CHARACTER SET utf8mb4</code> (coworking.sql:3)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h2>7. Funciones de Agregación y Ventana</h2>
+                    <table>
+                        <thead><tr><th>Palabra Clave</th><th>Frec.</th><th>Función y Propósito (Teoría)</th><th>Sintaxis General</th><th>Uso en este Ejercicio (Ejemplo Real)</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>AVG</code></td><td>12</td><td>Calcula el promedio aritmético de los valores numéricos de una columna.</td><td><code>AVG(columna_numerica)</code></td><td><code>AVG(TIMESTAMPDIFF(YEAR, fecha_nacimiento, CURDATE())) AS promedio_edad</code> (coworking.sql:794)</td></tr>
+                            <tr><td><code>COUNT</code></td><td>88</td><td>Cuenta la cantidad de registros o valores no nulos devueltos.</td><td><code>COUNT(*) / COUNT(columna)</code></td><td><code>COUNT(mu.id) AS total_usuarios</code> (coworking.sql:738)</td></tr>
+                            <tr><td><code>MAX</code></td><td>2</td><td>Encuentra el valor máximo de una columna.</td><td><code>MAX(columna)</code></td><td><code>AND a1.fecha_hora = (SELECT MAX(a2.fecha_hora) FROM accesos a2...)</code> (coworking.sql:1419)</td></tr>
+                            <tr><td><code>MIN</code></td><td>4</td><td>Encuentra el valor mínimo de una columna.</td><td><code>MIN(columna)</code></td><td><code>MIN(mu.fecha_contratacion) AS fecha_ingreso</code> (coworking.sql:747)</td></tr>
+                            <tr><td><code>OVER</code></td><td>4</td><td>Cláusula de Funciones de Ventana. Aplica cálculos sobre una partición de filas sin colapsarlas (a diferencia de GROUP BY).</td><td><code>SUM(col) OVER(PARTITION BY... ORDER BY...)</code></td><td><code>SUM(SUM(monto)) OVER(ORDER BY DATE_FORMAT(fecha_pago,'%Y-%m')) AS ingresos_acumulados</code> (coworking.sql:1683)</td></tr>
+                            <tr><td><code>SUM</code></td><td>68</td><td>Suma todos los valores numéricos de la columna especificada.</td><td><code>SUM(columna_numerica)</code></td><td><code>SUM(r.precio_final) AS total_gastado</code> (coworking.sql:812)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h2>8. Funciones del Sistema</h2>
+                    <table>
+                        <thead><tr><th>Palabra Clave</th><th>Frec.</th><th>Función y Propósito (Teoría)</th><th>Sintaxis General</th><th>Uso en este Ejercicio (Ejemplo Real)</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>CONCAT</code></td><td>134</td><td>Une (concatena) dos o más cadenas de texto en una sola.</td><td><code>CONCAT(txt1, txt2, ...)</code></td><td><code>CONCAT(nombre, ' ', apellidos) AS nombre,</code> (coworking.sql:708)</td></tr>
+                            <tr><td><code>CURDATE</code></td><td>104</td><td>Devuelve la fecha actual en formato YYYY-MM-DD (sin hora).</td><td><code>CURDATE()</code></td><td><code>AND YEAR(r.fecha_reserva) = YEAR(CURDATE())</code> (coworking.sql:787)</td></tr>
+                            <tr><td><code>CURRENT_TIMESTAMP</code></td><td>68</td><td>Retorna la fecha y hora actuales de ejecución.</td><td><code>DEFAULT CURRENT_TIMESTAMP</code></td><td><code>fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,</code> (coworking.sql:16)</td></tr>
+                            <tr><td><code>DATE_ADD</code></td><td>20</td><td>Suma un intervalo temporal (días, meses, horas, etc.) a una fecha.</td><td><code>DATE_ADD(fecha, INTERVAL val UNIDAD)</code></td><td><code>AND DATE_ADD(CURDATE(), INTERVAL 7 DAY);</code> (coworking.sql:873)</td></tr>
+                            <tr><td><code>DATE_FORMAT</code></td><td>12</td><td>Formatea una fecha según una cadena de formato específica (ej. %Y-%m).</td><td><code>DATE_FORMAT(fecha, '%d/%m/%Y')</code></td><td><code>DATE_FORMAT(fecha_pago, '%Y-%m') AS mes,</code> (coworking.sql:1278)</td></tr>
+                            <tr><td><code>DATE_SUB</code></td><td>62</td><td>Resta un intervalo temporal a una fecha dada.</td><td><code>DATE_SUB(fecha, INTERVAL val UNIDAD)</code></td><td><code>HAVING fecha_registro >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH);</code> (coworking.sql:883)</td></tr>
+                            <tr><td><code>NOW</code></td><td>74</td><td>Devuelve fecha y hora actuales en formato YYYY-MM-DD HH:MM:SS.</td><td><code>NOW()</code></td><td><code>SET mu.estado = 'SUSPENDIDA', mu.fecha_suspension = NOW()</code> (coworking.sql:1738)</td></tr>
+                            <tr><td><code>REPLACE</code></td><td>2</td><td>Reemplaza ocurrencias de una subcadena por otra en una cadena.</td><td><code>REPLACE(texto, buscar, cambiar)</code></td><td><code>REPLACE(p_nombre_base, ' ', '')</code> (coworking.sql:2474)</td></tr>
+                            <tr><td><code>UNIX_TIMESTAMP</code></td><td>14</td><td>Devuelve los segundos transcurridos desde 1970-01-01 (época Unix). Útil para IDs únicos.</td><td><code>UNIX_TIMESTAMP()</code></td><td><code>CONCAT('FAC-AUTO-', UNIX_TIMESTAMP())</code> (coworking.sql:1842)</td></tr>
+                            <tr><td><code>UUID</code></td><td>130</td><td>Genera un Identificador Único Universal de 36 caracteres.</td><td><code>UUID()</code></td><td><code>id VARCHAR(36) DEFAULT (UUID()) PRIMARY KEY,</code> (coworking.sql:8)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h2>9. Lógica Condicional</h2>
+                    <table>
+                        <thead><tr><th>Palabra Clave</th><th>Frec.</th><th>Función y Propósito (Teoría)</th><th>Sintaxis General</th><th>Uso en este Ejercicio (Ejemplo Real)</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>CASE</code></td><td>18</td><td>Estructura condicional (switch/if-else) que devuelve un valor según la condición cumplida.</td><td><code>CASE WHEN cond THEN ret ELSE def END</code></td><td><code>HAVING COUNT(CASE WHEN DAYOFWEEK(a.fecha_hora) NOT IN (1, 7) THEN 1 END) = 0</code> (coworking.sql:1369)</td></tr>
+                            <tr><td><code>ELSE</code></td><td>12</td><td>Acción o valor por defecto si ninguna condición anterior de CASE o IF fue verdadera.</td><td><code>CASE WHEN... THEN... ELSE val END</code></td><td><code>estado = CASE WHEN (saldo_pendiente - NEW.monto) <= 0 THEN 'PAGADA' ELSE 'PARCIAL' END</code> (coworking.sql:1881)</td></tr>
+                            <tr><td><code>END</code></td><td>148</td><td>Finaliza una estructura lógica, bloque compuesto (BEGIN...END) o condicional CASE.</td><td><code>CASE... END</code> <code>BEGIN... END</code></td><td><code>HAVING COUNT(CASE WHEN DAYOFWEEK(a.fecha_hora) NOT IN (1, 7) THEN 1 END) = 0</code> (coworking.sql:1369)</td></tr>
+                            <tr><td><code>IF</code></td><td>162</td><td>En DDL se usa con IF EXISTS/NOT EXISTS. En procedimientos, es la instrucción de control condicional.</td><td><code>IF cond THEN... END IF;</code></td><td><code>DROP DATABASE IF EXISTS coworking;</code> (coworking.sql:1)</td></tr>
+                            <tr><td><code>THEN</code></td><td>66</td><td>Especifica la acción o valor si la condición del WHEN/IF anterior es verdadera.</td><td><code>WHEN cond THEN valor</code></td><td><code>THEN 1 END ) = 0</code> (coworking.sql:1369)</td></tr>
+                            <tr><td><code>WHEN</code></td><td>18</td><td>Introduce la condición a evaluar dentro de una estructura condicional CASE.</td><td><code>CASE WHEN cond THEN...</code></td><td><code>CASE WHEN DAYOFWEEK(a.fecha_hora) NOT IN (1, 7) THEN 1 END</code> (coworking.sql:1369)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h2>10. Operadores y Restricciones</h2>
+                    <table>
+                        <thead><tr><th>Palabra Clave</th><th>Frec.</th><th>Función y Propósito (Teoría)</th><th>Sintaxis General</th><th>Uso en este Ejercicio (Ejemplo Real)</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>AND</code></td><td>228</td><td>Operador lógico "Y". Evalúa si ambas condiciones combinadas son verdaderas.</td><td><code>WHERE cond1 AND cond2</code></td><td><code>AND YEAR(r.fecha_reserva) = YEAR(CURDATE())</code> (coworking.sql:787)</td></tr>
+                            <tr><td><code>BETWEEN</code></td><td>4</td><td>Filtra un rango numérico o de fechas de forma inclusiva (incluye límites).</td><td><code>WHERE col BETWEEN min AND max</code></td><td><code>AND mu.fecha_fin BETWEEN CURDATE()</code> (coworking.sql:872)</td></tr>
+                            <tr><td><code>EXISTS</code></td><td>68</td><td>Evalúa si un subquery devuelve registros. En DDL valida existencia de objetos.</td><td><code>WHERE EXISTS (SELECT 1 ...)</code></td><td><code>DROP DATABASE IF EXISTS coworking;</code> (coworking.sql:1)</td></tr>
+                            <tr><td><code>IN</code></td><td>140</td><td>Compara si un valor pertenece a una lista estática o a resultados de un subquery.</td><td><code>WHERE col IN (val1, val2)</code></td><td><code>WHERE r.estado IN ('CONFIRMADA', 'PENDIENTE', 'COMPLETADA')</code> (coworking.sql:786)</td></tr>
+                            <tr><td><code>IS</code></td><td>26</td><td>Operador de comparación especial. Se usa casi exclusivamente con NULL (IS NULL / IS NOT NULL).</td><td><code>WHERE col IS NULL</code></td><td><code>WHERE r.id IS NULL;</code> (coworking.sql:777)</td></tr>
+                            <tr><td><code>LIKE</code></td><td>2</td><td>Busca patrones de texto usando comodines: % (cualquier cadena) y _ (un carácter).</td><td><code>WHERE col LIKE '%texto%'</code></td><td><code>WHERE mp.nombre LIKE '%Tarjeta%';</code> (coworking.sql:1110)</td></tr>
+                            <tr><td><code>NOT</code></td><td>304</td><td>Negación lógica. En DDL se usa como NOT NULL. En queries niega condiciones.</td><td><code>col NOT NULL</code> <code>WHERE NOT cond</code></td><td><code>CREATE TABLE IF NOT EXISTS empresas(</code> (coworking.sql:7)</td></tr>
+                            <tr><td><code>OR</code></td><td>10</td><td>Operador lógico "O". Evalúa si al menos una condición es verdadera.</td><td><code>WHERE cond1 OR cond2</code></td><td><code>OR TIME(a.fecha_hora) > '20:00:00';</code> (coworking.sql:1350)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h2>11. Programación Almacenada y Objetos</h2>
+                    <table>
+                        <thead><tr><th>Palabra Clave</th><th>Frec.</th><th>Función y Propósito (Teoría)</th><th>Sintaxis General</th><th>Uso en este Ejercicio (Ejemplo Real)</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>BEGIN</code></td><td>80</td><td>Marca el inicio del cuerpo de un procedimiento almacenado, trigger o bloque compuesto.</td><td><code>BEGIN... END</code></td><td><code>BEGIN</code> (coworking.sql:1711)</td></tr>
+                            <tr><td><code>DECLARE</code></td><td>58</td><td>Declara variables locales, manejadores de errores o cursores dentro de procedimientos o triggers.</td><td><code>DECLARE nombre TIPO;</code></td><td><code>DECLARE dias INT;</code> (coworking.sql:1712)</td></tr>
+                            <tr><td><code>DELIMITER</code></td><td>8</td><td>Cambia temporalmente el delimitador de fin de sentencia en MySQL CLI para compilar bloques complejos.</td><td><code>DELIMITER // ... DELIMITER ;</code></td><td><code>DELIMITER //</code> (coworking.sql:1705)</td></tr>
+                            <tr><td><code>DO</code></td><td>42</td><td>Palabra clave que introduce el bloque de instrucciones a repetir en un bucle WHILE.</td><td><code>WHILE cond DO... END WHILE;</code></td><td><code>DO</code> (coworking.sql:1985)</td></tr>
+                            <tr><td><code>OUT</code></td><td>2</td><td>Indica que un parámetro de un procedimiento almacenado es de salida (retorna valores al invocador).</td><td><code>CREATE PROCEDURE p(OUT var TIPO)</code></td><td><code>OUT p_disponible BOOLEAN</code> (coworking.sql:2235)</td></tr>
+                            <tr><td><code>PROCEDURE</code></td><td>40</td><td>Define un procedimiento almacenado, conjunto reusable de sentencias SQL compiladas.</td><td><code>CREATE PROCEDURE nombre ( ... )</code></td><td><code>CREATE PROCEDURE sp_membresias_registrar (</code> (coworking.sql:2171)</td></tr>
+                            <tr><td><code>TRIGGER</code></td><td>40</td><td>Define un disparador o trigger, objeto asociado a una tabla que se ejecuta automáticamente ante un evento.</td><td><code>CREATE TRIGGER nombre...</code></td><td><code>CREATE TRIGGER tr_...</code> (coworking.sql:1708)</td></tr>
+                            <tr><td><code>WHILE</code></td><td>4</td><td>Estructura de bucle que ejecuta repetidamente un conjunto de sentencias mientras la condición sea verdadera.</td><td><code>WHILE cond DO... END WHILE;</code></td><td><code>WHILE i <= p_cantidad DO</code> (coworking.sql:2469)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h2>12. Restricciones de Columna (Constraints)</h2>
+                    <table>
+                        <thead><tr><th>Palabra Clave</th><th>Frec.</th><th>Función y Propósito (Teoría)</th><th>Sintaxis General</th><th>Uso en este Ejercicio (Ejemplo Real)</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>DEFAULT</code></td><td>254</td><td>Establece un valor por defecto para la columna si no se especifica ninguno al insertar.</td><td><code>col TIPO DEFAULT valor</code></td><td><code>id VARCHAR(36) DEFAULT (UUID()) PRIMARY KEY,</code> (coworking.sql:8)</td></tr>
+                            <tr><td><code>FOREIGN</code></td><td>126</td><td>Parte de FOREIGN KEY. Establece una relación lógica con otra tabla, forzando integridad referencial.</td><td><code>FOREIGN KEY(col) REFERENCES t(col)</code></td><td><code>FOREIGN KEY(empresa_id) REFERENCES empresas(id)</code> (coworking.sql:31)</td></tr>
+                            <tr><td><code>KEY</code></td><td>192</td><td>Indica clave o índice. Se usa junto a PRIMARY KEY, FOREIGN KEY o para índices directos.</td><td><code>PRIMARY KEY / FOREIGN KEY</code></td><td><code>id VARCHAR(36) DEFAULT (UUID()) PRIMARY KEY,</code> (coworking.sql:8)</td></tr>
+                            <tr><td><code>NULL</code></td><td>340</td><td>Indica ausencia de valor. En DDL especifica si una columna acepta o no valores nulos.</td><td><code>col TIPO NULL / NOT NULL</code></td><td><code>nombre VARCHAR(150) NOT NULL,</code> (coworking.sql:9)</td></tr>
+                            <tr><td><code>PRIMARY</code></td><td>62</td><td>Parte de PRIMARY KEY. Define la clave primaria que identifica unívocamente cada registro.</td><td><code>col TIPO PRIMARY KEY</code></td><td><code>id VARCHAR(36) DEFAULT (UUID()) PRIMARY KEY,</code> (coworking.sql:8)</td></tr>
+                            <tr><td><code>REFERENCES</code></td><td>126</td><td>Especifica a qué tabla y columna apunta una clave foránea (FOREIGN KEY).</td><td><code>REFERENCES tabla_padre(col)</code></td><td><code>FOREIGN KEY(empresa_id) REFERENCES empresas(id)</code> (coworking.sql:31)</td></tr>
+                            <tr><td><code>UNIQUE</code></td><td>44</td><td>Exige que todos los valores de esa columna sean únicos (sin duplicados), permitiendo NULL.</td><td><code>col TIPO UNIQUE</code></td><td><code>rfc_nit VARCHAR(20) UNIQUE NOT NULL,</code> (coworking.sql:11)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h2>13. Tipos de Datos</h2>
+                    <table>
+                        <thead><tr><th>Palabra Clave</th><th>Frec.</th><th>Función y Propósito (Teoría)</th><th>Sintaxis General</th><th>Uso en este Ejercicio (Ejemplo Real)</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>BOOLEAN</code></td><td>28</td><td>Tipo lógico que acepta TRUE o FALSE (almacenado internamente como TINYINT(1)).</td><td><code>col BOOLEAN</code></td><td><code>acceso_sala_evento BOOLEAN DEFAULT FALSE,</code> (coworking.sql:41)</td></tr>
+                            <tr><td><code>DATE</code></td><td>50</td><td>Almacena fecha calendario (año, mes, día) sin hora. Formato: YYYY-MM-DD.</td><td><code>col DATE</code></td><td><code>fecha_nacimiento DATE,</code> (coworking.sql:25)</td></tr>
+                            <tr><td><code>DATETIME</code></td><td>104</td><td>Almacena instante de tiempo con fecha y hora. Formato: YYYY-MM-DD HH:MM:SS.</td><td><code>col DATETIME</code></td><td><code>fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,</code> (coworking.sql:16)</td></tr>
+                            <tr><td><code>DECIMAL</code></td><td>112</td><td>Número decimal exacto (precisión y escala). Ideal para valores financieros y dinero.</td><td><code>col DECIMAL(p, e)</code></td><td><code>precio_base DECIMAL(10,2) NOT NULL,</code> (coworking.sql:39)</td></tr>
+                            <tr><td><code>ENUM</code></td><td>114</td><td>Tipo cadena cuyo valor debe pertenecer a una lista estática explícita de opciones válidas.</td><td><code>col ENUM('V1','V2',...)</code></td><td><code>estado ENUM('ACTIVA','INACTIVA') DEFAULT 'ACTIVA'</code> (coworking.sql:17)</td></tr>
+                            <tr><td><code>INT</code></td><td>60</td><td>Número entero con signo (4 bytes, ~-2.1B a +2.1B).</td><td><code>col INT</code></td><td><code>duracion_dias INT NOT NULL,</code> (coworking.sql:38)</td></tr>
+                            <tr><td><code>INTEGER</code></td><td>0</td><td>Sinónimo directo de INT. Representa números enteros de 4 bytes.</td><td><code>col INTEGER</code></td><td>N/A (Identificado en estándar)</td></tr>
+                            <tr><td><code>JSON</code></td><td>24</td><td>Almacena documentos estructurados JSON de manera nativa para listas/configuraciones.</td><td><code>col JSON</code></td><td><code>servicio_incluidos JSON,</code> (coworking.sql:43)</td></tr>
+                            <tr><td><code>TEXT</code></td><td>30</td><td>Almacena cadenas de texto largas de longitud indefinida (hasta 65,535 caracteres).</td><td><code>col TEXT</code></td><td><code>descripcion TEXT,</code> (coworking.sql:37)</td></tr>
+                            <tr><td><code>TIME</code></td><td>46</td><td>Almacena una hora del día (horas, minutos, segundos) sin fecha. Formato: HH:MM:SS.</td><td><code>col TIME</code></td><td><code>hora_apertura TIME DEFAULT '8:00:00',</code> (coworking.sql:103)</td></tr>
+                            <tr><td><code>TIMESTAMP</code></td><td>0</td><td>Marca de tiempo con fecha y hora convertidas a UTC automáticas. Rango menor que DATETIME.</td><td><code>col TIMESTAMP</code></td><td>N/A (Identificado en estándar)</td></tr>
+                            <tr><td><code>VARCHAR</code></td><td>426</td><td>Cadena de texto de longitud variable con límite máximo indicado.</td><td><code>col VARCHAR(longitud)</code></td><td><code>id VARCHAR(36) DEFAULT (UUID()) PRIMARY KEY,</code> (coworking.sql:8)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h2>14. Uniones y Vinculación (Joins)</h2>
+                    <table>
+                        <thead><tr><th>Palabra Clave</th><th>Frec.</th><th>Función y Propósito (Teoría)</th><th>Sintaxis General</th><th>Uso en este Ejercicio (Ejemplo Real)</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>JOIN</code></td><td>242</td><td>Combina registros de dos o más tablas basándose en una columna en común.</td><td><code>FROM t1 JOIN t2 ON t1.id = t2.fk</code></td><td><code>JOIN membresia_usuario mu ON u.id = mu.usuario_id</code> (coworking.sql:718)</td></tr>
+                            <tr><td><code>LEFT</code></td><td>36</td><td>LEFT OUTER JOIN. Trae todos los registros de la tabla izquierda y empareja los de la derecha (si no hay coincidencia retorna NULL).</td><td><code>FROM t1 LEFT JOIN t2 ON cond</code></td><td><code>LEFT JOIN membresia_usuario mu ON tm.id = mu.tipo_membresia_id</code> (coworking.sql:740)</td></tr>
+                            <tr><td><code>ON</code></td><td>600</td><td>Especifica la condición de enlace en JOIN, o el objeto destino en INDEX, TRIGGER o GRANT.</td><td><code>JOIN t2 ON cond</code> <code>CREATE INDEX... ON t(col)</code></td><td><code>CREATE INDEX idx_usuario_estado ON usuario(estado);</code> (coworking.sql:63)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="stats-box" style="background-color: #fffbeb; border-left-color: #d97706; margin-top: 40px;">
+                        <h4 style="color: #92400e;">💡 Consejos Clave para el Examen de SQL</h4>
+                        <ul style="color: #92400e;">
+                            <li><strong>Diferencia DDL vs. DML:</strong> DDL (CREATE, ALTER, DROP) define la estructura de los datos (la caja). DML (SELECT, INSERT, UPDATE, DELETE) manipula los datos dentro de esa estructura (el contenido).</li>
+                            <li><strong>Claves Primarias vs. Foráneas:</strong> La PRIMARY KEY identifica de forma única una fila. La FOREIGN KEY (con REFERENCES) asegura la integridad referencial obligando a que el valor exista en la tabla padre.</li>
+                            <li><strong>Orden Lógico de Ejecución de SELECT:</strong> FROM & JOIN ➡️ WHERE ➡️ GROUP BY ➡️ HAVING ➡️ SELECT ➡️ ORDER BY ➡️ LIMIT. <em>Nota: No puedes usar un alias definido en el SELECT dentro del WHERE porque el WHERE se ejecuta antes.</em></li>
+                            <li><strong>WHERE vs. HAVING:</strong> WHERE filtra registros individuales antes de agrupar. HAVING filtra grupos enteros después de aplicar GROUP BY y funciones de agregación (COUNT, SUM, etc.).</li>
+                            <li><strong>Funciones de Ventana (OVER):</strong> A diferencia de GROUP BY que colapsa filas, OVER calcula subtotales o acumulados fila por fila, permitiendo análisis avanzados sin perder el detalle del registro.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: Estructura y Doc -->
+            <section class="tab-panel" id="section-2">
+                <div class="header-banner-tab">
+                    <h1>📊 Sistema de Gestión de Coworking ("Tienda de disfraces")</h1>
+                    <div class="subtitle">Documentación Técnica del Proyecto SQL y Análisis de Esquema</div>
+                </div>
+                <div class="document-body">
+                    <h2>1. Resumen Ejecutivo</h2>
+                    <p>Este documento proporciona una documentación técnica exhaustiva del <strong>Sistema de Gestión de Coworking</strong> (denominado bajo el nombre clave <strong>'Tienda de disfraces'</strong>). La base de datos está diseñada en <strong>MySQL 8.0+</strong> y normalizada en <strong>Tercera Forma Normal (3FN)</strong>. Contiene una fuerte lógica de automatización en base de datos mediante triggers, procedimientos almacenados y eventos que garantizan el correcto funcionamiento del negocio de forma autónoma.</p>
+
+                    <div class="stats-box">
+                        <h4>Estadísticas de Objetos en el Esquema:</h4>
+                        <ul>
+                            <li><strong>Tablas Estructurales</strong>: 31 tablas relacionales con índices y llaves foráneas correspondientes.</li>
+                            <li><strong>Vistas de Seguridad (RLS)</strong>: 4 vistas para el control de privacidad de datos.</li>
+                            <li><strong>Triggers Activos</strong>: 13 disparadores automáticos de auditoría y validación.</li>
+                            <li><strong>Procedimientos Almacenados</strong>: 20 stored procedures para lógica compleja.</li>
+                            <li><strong>Funciones de Usuario</strong>: 20 stored functions de cálculo utilitario.</li>
+                            <li><strong>Eventos Programados</strong>: 20 scheduled events de mantenimiento diario/semanal/mensual.</li>
+                            <li><strong>Roles de Seguridad</strong>: 5 roles lógicos predefinidos.</li>
+                            <li><strong>Consultas Predefinidas</strong>: 100 consultas SQL documentadas.</li>
+                        </ul>
+                    </div>
+
+                    <h2>2. Inventario de Objetos</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 8%;">ID</th>
+                                <th style="width: 32%;">Nombre del Objeto</th>
+                                <th style="width: 15%;">Tipo</th>
+                                <th style="width: 25%;">Ubicación (Archivo)</th>
+                                <th style="width: 20%;">Dependencias</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>1</td><td><code>empresas</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>Ninguna (Tabla base)</td></tr>
+                            <tr><td>2</td><td><code>usuario</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>empresas</td></tr>
+                            <tr><td>3</td><td><code>tipos_membresia</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>Ninguna (Tabla base)</td></tr>
+                            <tr><td>4</td><td><code>membresia_usuario</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>tipos_membresia, usuario</td></tr>
+                            <tr><td>5</td><td><code>historial_cambio_membresia</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>tipos_membresia, usuario, membresia_usuario</td></tr>
+                            <tr><td>6</td><td><code>tipos_espacios</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>Ninguna (Tabla base)</td></tr>
+                            <tr><td>7</td><td><code>espacios</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>tipos_espacios</td></tr>
+                            <tr><td>8</td><td><code>reservas</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>espacios, usuario, reservas</td></tr>
+                            <tr><td>9</td><td><code>reservas_clientes</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>reservas, usuario</td></tr>
+                            <tr><td>10</td><td><code>servicios_adicionales</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>Ninguna (Tabla base)</td></tr>
+                            <tr><td>11</td><td><code>servicios_contratados</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>reservas, servicios_adicionales, usuario</td></tr>
+                            <tr><td>12</td><td><code>metodos_pago</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>Ninguna (Tabla base)</td></tr>
+                            <tr><td>13</td><td><code>facturas</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>usuario, empresas</td></tr>
+                            <tr><td>14</td><td><code>detalle_factura</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>facturas</td></tr>
+                            <tr><td>15</td><td><code>pagos</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>facturas, metodos_pago, usuario</td></tr>
+                            <tr><td>16</td><td><code>recargos</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>facturas, usuario</td></tr>
+                            <tr><td>17</td><td><code>credenciales_acceso</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>usuario</td></tr>
+                            <tr><td>18</td><td><code>accesos</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>credenciales_acceso, usuario</td></tr>
+                            <tr><td>19</td><td><code>intentos_acceso_rechazados</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>credenciales_acceso, usuario</td></tr>
+                            <tr><td>20</td><td><code>log_membresias</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>tipos_membresia, usuario, membresia_usuario</td></tr>
+                            <tr><td>21</td><td><code>log_reservas</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>reservas, espacios, usuario</td></tr>
+                            <tr><td>22</td><td><code>log_pagos</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>facturas, metodos_pago, usuario, pagos</td></tr>
+                            <tr><td>23</td><td><code>log_accesos</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>credenciales_acceso, usuario, accesos</td></tr>
+                            <tr><td>24</td><td><code>recordatorios</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>usuario</td></tr>
+                            <tr><td>25</td><td><code>reportes_generados</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>usuario</td></tr>
+                            <tr><td>26</td><td><code>roles</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>Ninguna (Tabla base)</td></tr>
+                            <tr><td>27</td><td><code>permisos</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>Ninguna (Tabla base)</td></tr>
+                            <tr><td>28</td><td><code>roles_permisos</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>usuario, roles, permisos</td></tr>
+                            <tr><td>29</td><td><code>usuarios_roles</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>usuario, roles</td></tr>
+                            <tr><td>30</td><td><code>sesiones</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>usuario</td></tr>
+                            <tr><td>31</td><td><code>log_autorizacion</code></td><td>Tabla</td><td><code>1-estructura/ddl.sql</code></td><td>sesiones, usuario</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h2>3. Análisis Detallado</h2>
+                    <h3>3.1. Tablas y Estructura de Datos</h3>
+                    <p>El esquema relacional cuenta con las siguientes tablas detalladas en el DDL. Cada una incluye llaves primarias, foráneas, restricciones de tipo ENUM, JSON dinámico y sus respectivos índices de optimización para un gran volumen de transacciones.</p>
+
+                    <h4>Tabla: <code>empresas</code></h4>
+                    <p><strong>Ubicación:</strong> <code>1-estructura/ddl.sql</code> | <strong>Propósito:</strong> Almacena información de contacto y fiscal de las empresas clientas corporativas del coworking.</p>
+                    <pre><code>CREATE TABLE IF NOT EXISTS empresas(
+    id VARCHAR(36) DEFAULT (UUID()) PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL,
+    razon_social VARCHAR(200) NOT NULL,
+    rfc_nit VARCHAR(20) UNIQUE NOT NULL,
+    email_contacto VARCHAR(150),
+    telefono VARCHAR(15),
+    direccion VARCHAR(255),
+    persona_contacto VARCHAR(150),
+    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+    estado ENUM('ACTIVA','INACTIVA') DEFAULT 'ACTIVA'
+);</code></pre>
+
+                    <h4>Tabla: <code>usuario</code></h4>
+                    <p><strong>Ubicación:</strong> <code>1-estructura/ddl.sql</code> | <strong>Propósito:</strong> Almacena información de los usuarios del sistema (miembros, empleados, etc.), vinculándolos con empresas si aplica.</p>
+                    <pre><code>CREATE TABLE IF NOT EXISTS usuario(
+    id VARCHAR (36) DEFAULT (UUID()) PRIMARY KEY,
+    identificacion VARCHAR(30) UNIQUE NOT NULL,
+    nombre VARCHAR(80) NOT NULL,
+    apellidos VARCHAR(100) NOT NULL,
+    fecha_nacimiento DATE,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    telefono VARCHAR(15),
+    direccion VARCHAR(255),
+    empresa_id VARCHAR(36),
+    estado ENUM('ACTIVO','INACTIVO','BLOQUEADO') DEFAULT 'ACTIVO',
+    FOREIGN KEY (empresa_id) REFERENCES empresas(id)
+);</code></pre>
+
+                    <h4>Tabla: <code>tipos_membresia</code></h4>
+                    <p><strong>Ubicación:</strong> <code>1-estructura/ddl.sql</code> | <strong>Propósito:</strong> Define los diferentes planes de membresía disponibles en el coworking con su precio base y beneficios.</p>
+                    <pre><code>CREATE TABLE IF NOT EXISTS tipos_membresia(
+    id VARCHAR (36) DEFAULT (UUID()) PRIMARY KEY,
+    nombre VARCHAR(50) UNIQUE NOT NULL,
+    descripcion TEXT,
+    duracion_dias INT NOT NULL,
+    precio_base DECIMAL (10,2) NOT NULL,
+    limite_horas_mes INT,
+    acceso_sala_evento BOOLEAN DEFAULT FALSE,
+    acceso_sala_reuniones BOOLEAN DEFAULT FALSE,
+    servicio_incluidos JSON,
+    estado ENUM('ACTIVO','INACTIVO') DEFAULT 'ACTIVO'
+);</code></pre>
+
+                    <h3>3.2. Procedimientos Almacenados Destacados</h3>
+                    <h4>Procedimiento: <code>RegistrarNuevaMembresia</code></h4>
+                    <p><strong>Propósito:</strong> Registra la asignación de una nueva membresía validando previamente que el usuario no tenga otra membresía activa y calculando automáticamente la fecha de expiración.</p>
+                    <pre><code>DELIMITER //
+CREATE PROCEDURE RegistrarNuevaMembresia (
+    IN p_usuario_id VARCHAR(36),
+    IN p_tipo_membresia_id VARCHAR(36),
+    IN p_fecha_inicio DATE
+)
+BEGIN
+    DECLARE v_duracion INT;
+    DECLARE v_precio DECIMAL(10,2);
+    DECLARE v_fecha_fin DATE;
+    DECLARE v_membresia_activa INT;
+
+    SELECT COUNT(*) INTO v_membresia_activa FROM membresia_usuario 
+    WHERE usuario_id = p_usuario_id AND estado = 'ACTIVA';
+    
+    IF v_membresia_activa > 0 THEN 
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: El usuario ya tiene una membresia activa.';
+    END IF;
+
+    SELECT duracion_dias, precio_base INTO v_duracion, v_precio FROM tipos_membresia 
+    WHERE id = p_tipo_membresia_id AND estado = 'ACTIVO';
+    
+    IF v_duracion IS NULL THEN 
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Error: El tipo de membresia no existe o esta inactivo.';
+    END IF;
+
+    SET v_fecha_fin = DATE_ADD(p_fecha_inicio, INTERVAL v_duracion DAY);
+
+    INSERT INTO membresia_usuario(
+        usuario_id, tipo_membresia_id, fecha_inicio, fecha_fin, estado, precio_pagado
+    ) VALUES (
+        p_usuario_id, p_tipo_membresia_id, p_fecha_inicio, v_fecha_fin, 'ACTIVA', v_precio
+    );
+END //
+DELIMITER ;</code></pre>
+
+                    <h3>3.3. Funciones de Usuario Destacadas</h3>
+                    <h4>Función: <code>fn_dias_restantes_membresia</code></h4>
+                    <p><strong>Propósito:</strong> Calcula y retorna la cantidad de días restantes antes de que venza la membresía activa del usuario.</p>
+                    <pre><code>CREATE FUNCTION fn_dias_restantes_membresia(p_usuario_id VARCHAR(36)) 
+RETURNS INT 
+DETERMINISTIC READS SQL DATA
+BEGIN
+    DECLARE v_fecha_fin DATE;
+    DECLARE v_dias INT;
+    
+    SELECT MAX(fecha_fin) INTO v_fecha_fin FROM membresia_usuario 
+    WHERE usuario_id = p_usuario_id AND estado = 'ACTIVA';
+    
+    IF v_fecha_fin IS NULL THEN 
+        SET v_dias = 0;
+    ELSE 
+        SET v_dias = DATEDIFF(v_fecha_fin, CURDATE());
+    END IF;
+    RETURN v_dias;
+END;</code></pre>
+
+                    <h2>4. Conclusiones y Recomendaciones</h2>
+                    <ul>
+                        <li><strong>Arquitectura y Diseño:</strong> El esquema de base de datos presenta una excelente robustez relacional (normalización 3FN, llaves UUID, JSON para flexibilidad de stock/beneficios).</li>
+                        <li><strong>Calidad del Código SQL:</strong> Aunque el diseño teórico es excelente, la codificación de los triggers, procedimientos y eventos programados presenta múltiples fallas operativas debido al uso de tablas/columnas inexistentes o nombres erróneos que deben ser depurados.</li>
+                        <li><strong>Recomendación Contable:</strong> Es necesario asegurar que los reembolsos y facturaciones cruzadas mantengan la integridad referencial y no queden huérfanas mediante llaves por defecto inválidas.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 3: Guía SQL Maestra -->
+            <section class="tab-panel" id="section-3">
+                <div class="header-banner-tab">
+                    <h1>🎓 Guía y Plantilla SQL Maestra</h1>
+                    <div class="subtitle">Consultas del Coworking e Inteligencia Relacional</div>
+                </div>
+                <div class="document-body">
+                    <p>Esta guía contiene la <strong>Plantilla SQL Maestra</strong> diseñada a partir del patrón relacional del proyecto. Esta plantilla sirve como estructura base para construir y comprender cualquiera de las 100 consultas del sistema de gestión de coworking.</p>
+
+                    <div class="stats-box">
+                        <h4>💡 Concepto Clave: ¿Cómo funciona un <code>LEFT JOIN</code> con exclusión (<code>IS NULL</code>)?</h4>
+                        <p>Para un programador junior, es fundamental entender la diferencia entre conectar tablas y excluir registros:</p>
+                        <ol>
+                            <li><strong>La tabla izquierda (<code>FROM usuario</code>)</strong>: Es tu base de datos principal de personas.</li>
+                            <li><strong>La tabla derecha (<code>LEFT JOIN reservas</code>)</strong>: Es tu registro de transacciones.</li>
+                            <li><strong>El pegamento (<code>ON u.id = r.usuario_id</code>)</strong>: Es el canal que conecta a la persona con su transacción.</li>
+                            <li><strong>La exclusión (<code>WHERE r.id IS NULL</code>)</strong>: Al pedirle a la base de datos un <code>LEFT JOIN</code>, MySQL traerá a todos los usuarios, tengan o no reservas. Si un usuario no tiene reservas, los campos de la tabla derecha se llenarán con <code>NULL</code>. Al filtrar con <code>WHERE r.id IS NULL</code>, le estás diciendo a la base de datos: <em>"Tráeme solo a aquellos usuarios que nunca han registrado una reserva en el sistema"</em>.</li>
+                        </ol>
+                    </div>
+
+                    <h2>🎯 Estructura Base Solicitada</h2>
+                    <p>La plantilla sigue la estructura fundamental de emparejamiento y exclusión:</p>
+                    <pre><code>SELECT [Datos del Usuario]
+FROM [Tabla Usuarios]
+LEFT JOIN [Tabla Reservas] ON [Condición de unión por ID]
+WHERE [Columna ID de la Tabla Reservas] IS [Condiciones] ;</code></pre>
+
+                    <h2>🛠️ La Plantilla Maestra Comentada (Universal)</h2>
+                    <p>A continuación se presenta la <strong>Plantilla Maestra de Consulta</strong>. Está diseñada para que puedas activar (descomentar) o desactivar (comentar) las líneas según las necesidades de la consulta que vayas a construir.</p>
+
+                    <pre><code>-- ============================================================================
+-- 👑 PLANTILLA DE CONSULTA MAESTRA Y UNIVERSAL
+-- Diseñada para crear/entender las 100 consultas del ecosistema de Coworking.
+-- ============================================================================
+
+SELECT 
+    -- ------------------------------------------------------------------------
+    -- SECCIÓN 1: DATOS DEL USUARIO (Tabla Principal)
+    -- ------------------------------------------------------------------------
+    u.id AS usuario_id,                                           -- Identificador único del usuario (UUID)
+    CONCAT(u.nombre, ' ', u.apellidos) AS nombre_completo,        -- Nombre completo formateado de forma limpia
+    u.email AS correo_contacto,                                   -- Correo electrónico (Login / Contacto)
+    u.estado AS estado_usuario,                                   -- ACTIVO, INACTIVO, BLOQUEADO
+    
+    -- ------------------------------------------------------------------------
+    -- SECCIÓN 2: MÉTRICAS Y AGREGACIONES (Descomentar según requiera la consulta)
+    -- ------------------------------------------------------------------------
+    COUNT(r.id) AS total_reservas_usuario,                        -- Cuenta cuántas veces aparece el usuario en la tabla derecha
+    SUM(r.precio_final) AS total_gastado_usd,                     -- Suma el valor final de todas sus reservas o compras
+    AVG(r.duracion_horas) AS promedio_horas_por_reserva           -- Calcula el promedio de horas consumidas
+    -- , COUNT(DISTINCT r.espacio_id) AS espacios_diferentes_usados-- Cuenta cuántas salas distintas ha utilizado
+
+FROM usuario u -- [TABLA PRINCIPAL]: El punto de partida de la consulta (Usuarios)
+
+-- ----------------------------------------------------------------------------
+-- SECCIÓN 3: RELACIÓN PRINCIPAL (LEFT JOIN con Reservas)
+-- ----------------------------------------------------------------------------
+-- Usamos LEFT JOIN para no descartar a los usuarios que no tengan registros asociados.
+-- Si quieres forzar a que SOLO aparezcan usuarios con reservas, cambia 'LEFT' por 'INNER'.
+LEFT JOIN reservas r 
+    ON u.id = r.usuario_id -- [CONDICIÓN DE UNIÓN]: Une el UUID del usuario con su FK en reservas
+
+-- ----------------------------------------------------------------------------
+-- SECCIÓN 4: RELACIONES COMPLEMENTARIAS (Módulos opcionales)
+-- Descomenta estas líneas si la consulta requiere datos de otros módulos:
+-- ----------------------------------------------------------------------------
+-- LEFT JOIN membresia_usuario mu   ON u.id = mu.usuario_id      -- Para datos de membresías (estado, fechas, renovación)
+-- LEFT JOIN tipos_membresia tm     ON mu.tipo_membresia_id = tm.id-- Para saber detalles del plan (Premium, Básico, etc.)
+-- LEFT JOIN empresas e             ON u.empresa_id = e.id        -- Para consultar la empresa a la que pertenece
+-- LEFT JOIN servicios_contratados sc ON u.id = sc.usuario_id     -- Para compras de alimentos, café, impresiones, etc.
+-- LEFT JOIN accesos ac             ON u.id = ac.usuario_id      -- Para auditoría de entradas y salidas físicas
+
+WHERE 
+    -- ------------------------------------------------------------------------
+    -- SECCIÓN 5: CONDICIONES Y FILTROS (Toggles de Lógica de Negocio)
+    -- Elige y descomenta la condición exacta que responda a tu pregunta:
+    -- ------------------------------------------------------------------------
+    
+    -- [OPCIÓN A: EXCLUSIÓN PURA (Ej: Consultas 9, 20, 63, 71, 76)]
+    -- Devuelve usuarios que NUNCA han reservado (o asistido) en el sistema.
+    r.id IS NULL
+    
+    -- [OPCIÓN B: FILTRADO DE ESTADOS DE RESERVAS (Ej: Consultas 2, 3, 4, 10, 15, 22, 84)]
+    -- OR r.estado = 'CONFIRMADA'                                 -- Reservas pagadas y listas para usar
+    -- OR r.estado = 'PENDIENTE'                                  -- Reservas creadas esperando pago
+    -- OR r.estado = 'CANCELADA'                                  -- Reservas anuladas
+    -- OR r.estado = 'NOSHOW'                                     -- Reservas donde el cliente no asistió
+    
+    -- [OPCIÓN C: FILTRADO POR FECHAS (Ej: Consultas 18, 19, 23, 26, 43, 60, 70)]
+    -- OR r.fecha_reserva = CURDATE()                             -- Reservas del día de hoy
+    -- OR r.fecha_reserva >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)  -- Reservas hechas en la última semana
+    -- OR r.fecha_reserva >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH) -- Reservas hechas en el último mes
+    
+    -- [OPCIÓN D: CONDICIÓN DE COMPORTAMIENTO DEL USUARIO]
+    -- AND u.estado = 'ACTIVO'                                    -- Solo usuarios que no estén bloqueados
+    
+-- ----------------------------------------------------------------------------
+-- SECCIÓN 6: AGRUPAMIENTO (Obligatorio si usas COUNT, SUM o AVG en la Sección 2)
+-- ----------------------------------------------------------------------------
+GROUP BY 
+    u.id, 
+    u.nombre, 
+    u.apellidos, 
+    u.email, 
+    u.estado
+
+-- ----------------------------------------------------------------------------
+-- SECCIÓN 7: FILTRADO DE MÉTRICAS AGRUPADAS (HAVING)
+-- Se ejecuta DESPUÉS de agrupar los datos (Ej: Consultas 10, 12, 13, 32, 57, 62, 85, 96, 100)
+-- ----------------------------------------------------------------------------
+HAVING 
+    -- total_reservas_usuario > 5                                 -- Solo clientes con más de 5 reservas
+    -- OR total_gastado_usd > 500                                 -- Clientes de alto valor (gasto mayor a $500)
+    1 = 1 -- Condición comodín por defecto (no altera el flujo si no se usa HAVING)
+
+-- ----------------------------------------------------------------------------
+-- SECCIÓN 8: ORDENAMIENTO (TOPs y Listados)
+-- ----------------------------------------------------------------------------
+ORDER BY 
+    -- total_gastado_usd DESC                                     -- Para ver a los clientes que más aportan al negocio (Top/Rankings)
+    -- total_reservas_usuario DESC                                -- Para ver a los clientes más frecuentes
+    nombre_completo ASC;                                          -- Listar por orden alfabético de la A a la Z</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 4: Stored Procedures -->
+            <section class="tab-panel" id="section-4">
+                <div class="header-banner-tab">
+                    <h1>🎓 Guía y Plantilla Maestra: Stored Procedures</h1>
+                    <div class="subtitle">Procedimientos Almacenados y Lógica de Negocio en Base de Datos</div>
+                </div>
+                <div class="document-body">
+                    <p>Esta guía contiene la <strong>Plantilla Maestra de Procedimientos Almacenados</strong> diseñada a partir del análisis de la lógica de negocio del proyecto (Membresías, Reservas, Facturación, Accesos). Sirve como estructura base para construir, comprender y mantener cualquier procedimiento del sistema de gestión de coworking.</p>
+
+                    <div class="stats-box">
+                        <h4>💡 Concepto Clave: ¿Qué es y por qué usar un Procedimiento Almacenado?</h4>
+                        <p>Para un programador junior, es fundamental entender que un procedimiento almacenado no es solo una consulta, es un <strong>mini-programa que vive dentro de la base de datos</strong>:</p>
+                        <ol>
+                            <li><strong>Encapsulamiento:</strong> Agrupa varias operaciones (validar, calcular, insertar) en un solo bloque ejecutable.</li>
+                            <li><strong>Seguridad:</strong> Previene la inyección SQL y centraliza las reglas de negocio en la base de datos, no en el código del frontend/backend.</li>
+                            <li><strong>Rendimiento:</strong> Se compila una vez en el servidor de base de datos, haciendo su ejecución más rápida.</li>
+                            <li><strong><code>DELIMITER //</code>:</strong> Le dice a MySQL: <em>"No termines la instrucción cuando veas un punto y coma (<code>;</code>), espera hasta que vea <code>//</code>"</em>. Esto es obligatorio porque el procedimiento contiene muchos <code>;</code> internos.</li>
+                        </ol>
+                    </div>
+
+                    <h2>🛠️ La Plantilla Maestra Comentada (Universal)</h2>
+                    <p>A continuación se presenta la <strong>Plantilla Maestra</strong>. Está diseñada para que puedas activar (descomentar) o desactivar (comentar) las líneas según las necesidades de la lógica de negocio que vayas a implementar.</p>
+
+                    <pre><code>-- ============================================================================
+-- 👑 PLANTILLA MAESTRA DE PROCEDIMIENTO ALMACENADO
+-- Diseñada para crear/entender la lógica de negocio del ecosistema Coworking.
+-- ============================================================================
+
+-- 1. CAMBIO DE DELIMITADOR: Obligatorio para que MySQL no se confunda con los ';' internos
+DELIMITER //
+
+CREATE PROCEDURE NombreDelProcedimiento(
+    -- ------------------------------------------------------------------------
+    -- SECCIÓN 1: PARÁMETROS DE ENTRADA/SALIDA
+    -- IN: El procedimiento recibe este dato desde la aplicación.
+    -- OUT: El procedimiento devuelve este dato a la aplicación (opcional).
+    -- ------------------------------------------------------------------------
+    IN p_parametro_id VARCHAR(36),          -- Ej: ID del usuario o reserva (UUID)
+    IN p_parametro_fecha DATE,              -- Ej: Fecha de inicio o vencimiento
+    IN p_parametro_monto DECIMAL(10,2)      -- Ej: Precio, porcentaje o cantidad
+    -- , OUT p_mensaje_resultado VARCHAR(255) -- Descomentar si necesitas devolver un mensaje específico
+)
+BEGIN
+    -- =========================================================================
+    -- SECCIÓN 2: DECLARACIÓN DE VARIABLES LOCALES
+    -- Estas variables solo existen durante la ejecución de este procedimiento.
+    -- Se usan como "cajas temporales" para guardar resultados de consultas.
+    -- =========================================================================
+    DECLARE v_existe_registro INT DEFAULT 0;
+    DECLARE v_estado_actual VARCHAR(50);
+    DECLARE v_monto_calculado DECIMAL(10,2);
+    DECLARE v_id_generado VARCHAR(36);
+    
+    -- [OPCIONAL] Manejo de errores para hacer ROLLBACK automático si algo falla
+    -- DECLARE EXIT HANDLER FOR SQLEXCEPTION 
+    -- BEGIN
+    --     ROLLBACK; 
+    --     SELECT 'Ocurrió un error inesperado. La transacción fue cancelada.' AS mensaje;
+    -- END;
+
+    -- =========================================================================
+    -- SECCIÓN 3: VALIDACIONES Y REGLAS DE NEGOCIO (Guard Clauses)
+    -- ANTES de modificar datos, verificamos que sea seguro hacerlo.
+    -- Esto evita duplicados, estados inválidos o datos corruptos.
+    -- =========================================================================
+    
+    -- [OPCIÓN A: Validar duplicidad o condición restrictiva]
+    -- Ejemplo: Verificar si un usuario ya tiene una membresía activa
+    SELECT COUNT(*) INTO v_existe_registro
+    FROM membresia_usuario
+    WHERE usuario_id = p_parametro_id AND estado = 'ACTIVA';
+    
+    IF v_existe_registro > 0 THEN
+        -- SIGNAL SQLSTATE '45000' es la forma estándar de lanzar un error controlado en MySQL
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error: El usuario ya tiene una membresía activa.';
+    END IF;
+
+    -- [OPCIÓN B: Validar que el registro objetivo exista antes de modificarlo]
+    SELECT estado INTO v_estado_actual
+    FROM reservas
+    WHERE id = p_parametro_id;
+    
+    IF v_estado_actual IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error: El registro solicitado no existe.';
+    ELSEIF v_estado_actual != 'PENDIENTE' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error: Solo se pueden procesar registros en estado PENDIENTE.';
+    END IF;
+
+    -- =========================================================================
+    -- SECCIÓN 4: OBTENCIÓN DE DATOS Y CÁLCULOS INTERMEDIOS
+    -- Preparamos los valores que vamos a insertar o actualizar.
+    -- =========================================================================
+    
+    -- Obtener datos de otra tabla para usarlos en la operación principal
+    -- SELECT tarifa_base, duracion INTO v_monto_base, v_duracion FROM espacios WHERE id = p_parametro_id;
+    
+    -- Realizar cálculos de negocio (Fechas, montos, duraciones)
+    -- SET v_monto_calculado = p_parametro_monto * 0.20; -- Ej: 20% de recargo
+    -- SET v_id_generado = UUID(); -- Generar un ID único manualmente si la tabla lo requiere
+
+    -- =========================================================================
+    -- SECCIÓN 5: LÓGICA DE NEGOCIO PRINCIPAL (DML: INSERT, UPDATE, DELETE, CALL)
+    -- Aquí ocurre la acción real sobre la base de datos. Elige la que necesites.
+    -- =========================================================================
+    
+    -- [OPCIÓN A: INSERTAR un nuevo registro]
+    -- INSERT INTO tabla_destino (id, campo1, campo2, estado)
+    -- VALUES (v_id_generado, p_parametro_id, v_monto_calculado, 'ACTIVO');
+    
+    -- [OPCIÓN B: ACTUALIZAR un registro existente]
+    -- UPDATE tabla_destino
+    -- SET campo1 = p_parametro_fecha,
+    --     estado = 'COMPLETADO',
+    --     fecha_actualizacion = CURRENT_TIMESTAMP()
+    -- WHERE id = p_parametro_id;
+    
+    -- [OPCIÓN C: LLAMAR a otro procedimiento almacenado (Reutilización de código)]
+    -- CALL VerificarDisponibilidad(p_parametro_id, p_parametro_fecha, ...);
+
+    -- =========================================================================
+    -- SECCIÓN 6: RETORNO DE RESULTADO O CONFIRMACIÓN
+    -- Es una buena práctica devolver un mensaje o el ID afectado para que 
+    -- el backend (Node.js, Python, PHP) sepa que todo salió bien.
+    -- =========================================================================
+    
+    SELECT 'Operación realizada con éxito' AS mensaje, 
+           v_id_generado AS id_registro_afectado; 
+           -- , p_mensaje_resultado -- Si usaste un parámetro OUT
+
+END // 
+
+-- 7. RESTAURAR DELIMITADOR: Volvemos a poner ';' como separador normal de MySQL
+DELIMITER ;</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 5: Funciones UDF -->
+            <section class="tab-panel" id="section-5">
+                <div class="header-banner-tab">
+                    <h1>🎓 Guía y Plantilla Maestra</h1>
+                    <div class="subtitle">Funciones Definidas por el Usuario (UDF) en SQL</div>
+                </div>
+                <div class="document-body">
+                    <p>Esta guía contiene la <strong>Plantilla Maestra de Funciones SQL</strong> diseñada a partir del análisis de las 20 funciones del ecosistema de Coworking (Membresías, Reservas, Finanzas y Accesos). Sirve como estructura base para crear, comprender y reutilizar lógica de cálculo que devuelve un <strong>único valor</strong>.</p>
+
+                    <h2>💡 Concepto Clave: ¿Qué es y por qué usar una Función (FUNCTION)?</h2>
+                    <p>Para un programador junior, es fundamental entender la diferencia entre un Procedimiento y una Función:</p>
+                    
+                    <div class="stats-box">
+                        <ol>
+                            <li><strong>Devuelve un solo valor:</strong> A diferencia de un <code>SELECT</code> normal o un Procedimiento, una Función siempre retorna un dato único (un número, un texto, una fecha o un booleano).</li>
+                            <li><strong>Es una "Calculadora":</strong> Se usa dentro de consultas <code>SELECT</code>, <code>WHERE</code> o <code>INSERT</code> como si fuera una columna más (Ej: <code>SELECT fn_dias_restantes_membresia(id) FROM usuario</code>).</li>
+                            <li><strong>No modifica datos:</strong> Una Función <strong>NUNCA</strong> puede hacer <code>INSERT</code>, <code>UPDATE</code> o <code>DELETE</code>. Solo lee datos (<code>READS SQL DATA</code>).</li>
+                            <li><strong>Seguridad de Nulos:</strong> Es vital usar <code>IFNULL()</code> o <code>COALESCE()</code> dentro de la función para evitar que rompa la consulta principal devolviendo <code>NULL</code>.</li>
+                        </ol>
+                    </div>
+
+                    <h2>🛠️ La Plantilla Maestra Comentada (Universal para Funciones)</h2>
+                    <p>A continuación se presenta la <strong>Plantilla Maestra</strong>. Está diseñada para que puedas adaptar la lógica de extracción y cálculo según necesites.</p>
+
+<pre><code>-- ============================================================================
+-- 👑 PLANTILLA MAESTRA DE FUNCIÓN (USER-DEFINED FUNCTION - UDF)
+-- Diseñada para crear/entender funciones de cálculo en el ecosistema Coworking.
+-- ============================================================================
+
+DELIMITER //
+
+CREATE FUNCTION fn_nombre_descriptivo_de_la_funcion(
+    -- ------------------------------------------------------------------------
+    -- SECCIÓN 1: PARÁMETROS DE ENTRADA
+    -- Las funciones solo reciben parámetros de entrada (IN). No usan la palabra 'IN' explícitamente.
+    -- ------------------------------------------------------------------------
+    p_parametro_id VARCHAR(36),          -- Ej: ID del usuario o espacio
+    p_parametro_fecha DATE               -- Ej: Mes o año para filtrar (opcional)
+)
+RETURNS TIPO_DE_DATO                     -- Ej: INT, DECIMAL(10,2), VARCHAR(100), BOOLEAN, DATETIME
+DETERMINISTIC                            -- Indica que para los mismos parámetros, siempre devuelve lo mismo
+READS SQL DATA                           -- Indica que la función solo lee datos, no los modifica
+BEGIN
+    -- =========================================================================
+    -- SECCIÓN 2: DECLARACIÓN DE VARIABLES LOCALES
+    -- "Cajas temporales" para guardar el resultado del SELECT antes de retornarlo.
+    -- SIEMPRE inicialízalas con un valor por defecto (0, '', NULL) para evitar errores.
+    -- =========================================================================
+    DECLARE v_resultado TIPO_DE_DATO DEFAULT 0; -- Ej: DEFAULT 0 para números, DEFAULT '' para texto
+    DECLARE v_contador INT DEFAULT 0;
+
+    -- =========================================================================
+    -- SECCIÓN 3: EXTRACCIÓN Y CÁLCULO DE DATOS (El núcleo de la función)
+    -- Usamos SELECT ... INTO para guardar el resultado de la consulta en la variable.
+    -- =========================================================================
+    
+    -- [OPCIÓN A: Conteo o Suma simple con filtro]
+    -- SELECT COUNT(*) INTO v_resultado FROM tabla WHERE condicion = p_parametro_id;
+    
+    -- [OPCIÓN B: Agregación con JOIN y filtros de fecha]
+    -- SELECT SUM(campo) INTO v_resultado 
+    -- FROM tabla1 t1 JOIN tabla2 t2 ON t1.id = t2.id 
+    -- WHERE t1.campo_id = p_parametro_id AND MONTH(t1.fecha) = p_parametro_fecha;
+
+    -- [OPCIÓN C: Obtener un valor específico (Top 1, Máximo, etc.)]
+    -- SELECT campo INTO v_resultado FROM tabla WHERE condicion ORDER BY campo DESC LIMIT 1;
+
+    -- =========================================================================
+    -- SECCIÓN 4: MANEJO DE NULOS Y LÓGICA CONDICIONAL (Crucial para Juniors)
+    -- Si la consulta no encuentra nada, 'v_resultado' podría ser NULL. Debemos asegurar un retorno seguro.
+    -- =========================================================================
+    
+    -- Método 1: Usando IFNULL directamente en el RETURN o en la asignación (Recomendado)
+    -- SET v_resultado = IFNULL(v_resultado, 0); 
+    
+    -- Método 2: Usando bloques IF para lógica de negocio específica
+    -- IF v_resultado IS NULL THEN
+    --     SET v_resultado = 0; -- O 'SIN DATOS', o FALSE, según el tipo de retorno
+    -- END IF;
+
+    -- =========================================================================
+    -- SECCIÓN 5: RETORNO DEL VALOR
+    -- La función DEBE terminar con un RETURN. Solo se puede retornar una variable o valor.
+    -- =========================================================================
+    
+    RETURN v_resultado;
+
+END //
+
+DELIMITER ;</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 6: Triggers -->
+            <section class="tab-panel" id="section-6">
+                <div class="header-banner-tab">
+                    <h1>🎓 Guía y Plantilla Maestra</h1>
+                    <div class="subtitle">Triggers (Disparadores) en SQL</div>
+                </div>
+                <div class="document-body">
+                    <p>Esta guía contiene la <strong>Plantilla Maestra de Triggers</strong> diseñada a partir del análisis de los 20 disparadores del ecosistema de Coworking (Membresías, Reservas, Pagos y Accesos). Sirve como estructura base para automatizar reglas de negocio, auditoría y validaciones directamente en la base de datos.</p>
+
+                    <h2>💡 Concepto Clave: ¿Qué es y por qué usar un Trigger?</h2>
+                    <p>Para un programador junior, un Trigger es como un <strong>"Guardia de Seguridad" o un "Asistente Automático"</strong> que vive dentro de una tabla específica:</p>
+                    
+                    <div class="stats-box">
+                        <ol>
+                            <li><strong>Automatización:</strong> Se ejecuta <em>solo</em> cuando ocurre un evento específico (<code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>) en una tabla.</li>
+                            <li><strong><code>BEFORE</code> (Antes):</strong> Ocurre <em>antes</em> de que el dato se guarde. <strong>Puedes modificar el dato</strong> (<code>SET NEW.campo = valor</code>) o <strong>bloquear la operación</strong> (<code>SIGNAL SQLSTATE</code>).</li>
+                            <li><strong><code>AFTER</code> (Después):</strong> Ocurre <em>después</em> de que el dato ya se guardó. <strong>No puedes modificar el dato original</strong>, pero sí puedes usarlo para actualizar otras tablas (cascada) o guardar un registro en una tabla de logs (auditoría).</li>
+                            <li><strong><code>NEW</code> y <code>OLD</code>:</strong>
+                                <ul>
+                                    <li><code>NEW.campo</code>: El valor que se está intentando insertar o actualizar (disponible en <code>INSERT</code> y <code>UPDATE</code>).</li>
+                                    <li><code>OLD.campo</code>: El valor que tenía el registro antes de la modificación (disponible en <code>UPDATE</code> y <code>DELETE</code>).</li>
+                                </ul>
+                            </li>
+                        </ol>
+                    </div>
+
+                    <h2>🛠️ La Plantilla Maestra Comentada (Universal)</h2>
+                    <p>A continuación se presenta la <strong>Plantilla Maestra</strong>. Contiene las 3 estructuras más comunes. Copia y adapta la que necesites.</p>
+
+<pre><code>-- ============================================================================
+-- 👑 PLANTILLA MAESTRA DE TRIGGERS (DISPARADORES)
+-- Diseñada para automatizar lógica en el ecosistema Coworking.
+-- ============================================================================
+
+DELIMITER //
+
+-- OPCIÓN A: TRIGGER "BEFORE" (Para validar o modificar datos ANTES de guardar)
+CREATE TRIGGER trg_modulo_accion_antes
+BEFORE INSERT -- O BEFORE UPDATE / BEFORE DELETE
+ON nombre_de_la_tabla
+FOR EACH ROW 
+BEGIN
+    -- 1. Declarar variables si necesitas hacer cálculos o consultas previas
+    DECLARE v_variable_auxiliar INT DEFAULT 0;
+
+    -- 2. Lógica de validación (BLOQUEO)
+    -- Si se cumple una condición prohibida, lanzamos un error y detenemos todo
+    IF (SELECT COUNT(*) FROM otra_tabla WHERE condicion = NEW.campo_id) > 0 THEN
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'Error: No se permite esta acción por X motivo';
+    END IF;
+
+    -- 3. Lógica de modificación automática (AUTO-COMPLETAR)
+    -- Podemos cambiar el valor que el usuario está intentando guardar
+    IF NEW.estado IS NULL THEN
+        SET NEW.estado = 'PENDIENTE'; -- Forzamos un valor por defecto
+    END IF;
+    
+    -- Ejemplo de cálculo de fechas
+    -- SET NEW.fecha_fin = DATE_ADD(NEW.fecha_inicio, INTERVAL 1 MONTH);
+END //
+
+
+-- OPCIÓN B: TRIGGER "AFTER" (Para auditoría o actualizar OTRAS tablas DESPUÉS de guardar)
+CREATE TRIGGER trg_modulo_accion_despues
+AFTER UPDATE -- O AFTER INSERT / AFTER DELETE
+ON nombre_de_la_tabla
+FOR EACH ROW 
+BEGIN
+    -- 1. Verificar que el cambio sea el que nos interesa (evita ejecuciones innecesarias)
+    IF NEW.estado = 'PAGADO' AND OLD.estado != 'PAGADO' THEN
+        
+        -- 2. Actualizar otra tabla relacionada (Efecto Cascada)
+        UPDATE tabla_relacionada 
+        SET estado = 'ACTIVO' 
+        WHERE id_relacion = NEW.id;
+        
+        -- 3. O crear un registro de auditoría (Log)
+        -- INSERT INTO log_tabla (id_registro, accion, fecha) 
+        -- VALUES (NEW.id, 'Estado cambiado a PAGADO', NOW());
+        
+    END IF;
+END //
+
+DELIMITER ;</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 7: Eventos Programados -->
+            <section class="tab-panel" id="section-7">
+                <div class="header-banner-tab">
+                    <h1>🎓 Guía y Plantilla Maestra</h1>
+                    <div class="subtitle">Eventos Programados (Scheduled Events) en SQL</div>
+                </div>
+                <div class="document-body">
+                    <p>Esta guía contiene la <strong>Plantilla Maestra de Eventos Programados</strong> diseñada a partir del análisis de los 20 eventos del ecosistema de Coworking (Membresías, Reservas, Pagos y Accesos). Sirve como estructura base para automatizar tareas de mantenimiento, reportes y notificaciones directamente en el motor de base de datos, sin depender de scripts externos.</p>
+
+                    <h2>💡 Concepto Clave: ¿Qué es y por qué usar un Evento Programado?</h2>
+                    <p>Para un programador junior, un Evento Programado es el equivalente a un <strong>"Cron Job" o "Tarea Programada" interno de MySQL</strong>:</p>
+                    
+                    <div class="stats-box">
+                        <ol>
+                            <li><strong>Automatización Nativa:</strong> Ejecuta consultas SQL automáticamente en intervalos de tiempo específicos (cada hora, cada día, cada mes) o en una fecha y hora exacta.</li>
+                            <li><strong>Requisito Obligatorio:</strong> El planificador de eventos de MySQL debe estar activado en el servidor (<code>SET GLOBAL event_scheduler = ON;</code>). Si no lo está, los eventos se crean pero <strong>nunca se ejecutan</strong>.</li>
+                            <li><strong><code>DO</code> vs <code>BEGIN ... END</code>:</strong> Si el evento solo ejecuta una línea (ej: un <code>UPDATE</code>), puedes usar <code>DO</code> directamente. Si necesita ejecutar múltiples líneas (ej: un <code>UPDATE</code> y luego un <code>INSERT</code> en un log), debes envolver la lógica en <code>DO BEGIN ... END</code>.</li>
+                            <li><strong>Funciones de Fecha:</strong> Son el corazón de los eventos. <code>CURDATE()</code> (solo fecha), <code>NOW()</code> (fecha y hora), <code>DATE_ADD()</code> (sumar tiempo) y <code>DATE_SUB()</code> (restar tiempo) son tus mejores amigos para filtrar datos antiguos o futuros.</li>
+                        </ol>
+                    </div>
+
+                    <h2>🛠️ La Plantilla Maestra Comentada (Universal)</h2>
+                    <p>A continuación se presenta la <strong>Plantilla Maestra</strong>. Está diseñada para cubrir desde tareas simples de una sola línea hasta procesos complejos de múltiples pasos.</p>
+
+<pre><code>-- ============================================================================
+-- 👑 PLANTILLA MAESTRA DE EVENTO PROGRAMADO (SCHEDULED EVENT)
+-- Diseñada para automatizar tareas en el ecosistema Coworking.
+-- ============================================================================
+
+-- ⚠️ IMPORTANTE: Ejecutar esto una sola vez en el servidor para activar el motor de eventos
+-- SET GLOBAL event_scheduler = ON;
+
+DELIMITER //
+
+CREATE EVENT evt_nombre_descriptivo_de_la_tarea
+ON SCHEDULE 
+    -- [OPCIÓN A: Intervalo recurrente]
+    EVERY 1 DAY                  -- Opciones: SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, YEAR
+    -- [OPCIÓN B: Fecha y hora exacta (una sola vez)]
+    -- AT '2024-12-31 23:59:00'
+    
+    -- [OPCIONAL] Control de vida útil del evento
+    -- STARTS '2024-01-01 00:00:00'  -- Cuándo empieza a contar el intervalo
+    -- ENDS '2025-12-31 23:59:59'    -- Cuándo deja de ejecutarse automáticamente
+DO
+BEGIN
+    -- =========================================================================
+    -- SECCIÓN ÚNICA DE LÓGICA: Aquí va la acción a realizar automáticamente
+    -- Puedes descomentar y adaptar una o varias de las siguientes opciones:
+    -- =========================================================================
+    
+    -- [OPCIÓN 1: MANTENIMIENTO / ACTUALIZACIÓN MASIVA]
+    -- Cambiar estados de registros que cumplan una condición de tiempo
+    -- UPDATE tabla_destino 
+    -- SET estado = 'VENCIDA' 
+    -- WHERE estado = 'ACTIVA' AND fecha_limite < CURDATE();
+
+    -- [OPCIÓN 2: GENERACIÓN DE REPORTES O RECORDATORIOS]
+    -- Insertar datos resumidos o alertas en una tabla de logs/recordatorios
+    -- INSERT INTO tabla_reportes (tipo, datos, fecha)
+    -- SELECT 'TIPO_REPORTE', COUNT(*), NOW() 
+    -- FROM tabla_origen 
+    -- WHERE fecha_creacion >= DATE_SUB(CURDATE(), INTERVAL 7 DAY);
+
+    -- [OPCIÓN 3: LIMPIEZA DE DATOS ANTIGUOS (PURGE)]
+    -- Eliminar registros históricos para liberar espacio y mejorar rendimiento
+    -- DELETE FROM tabla_logs 
+    -- WHERE fecha_registro < DATE_SUB(CURDATE(), INTERVAL 1 YEAR);
+
+END //
+
+DELIMITER ;</code></pre>
+                </div>
+            </section>
+
+            <!-- Section 8: Roles y RBAC -->
+            <section class="tab-panel" id="section-8">
+                <div class="header-banner-tab">
+                    <h1>🎓 Guía y Plantilla Maestra</h1>
+                    <div class="subtitle">Control de Acceso y Roles (RBAC) en SQL</div>
+                </div>
+                <div class="document-body">
+                    <p>Esta guía contiene la <strong>Plantilla Maestra de Seguridad y Roles</strong> diseñada a partir del análisis del ecosistema de Coworking. Sirve como estructura base para implementar el <strong>Principio de Menor Privilegio</strong>, garantizando que cada usuario o sistema tenga únicamente los permisos estrictamente necesarios para realizar su trabajo, protegiendo la integridad y confidencialidad de los datos.</p>
+
+                    <h2>💡 Concepto Clave: ¿Qué es RBAC y por qué usar Vistas de Seguridad?</h2>
+                    <p>Para un programador junior, la seguridad en bases de datos se basa en dos pilares fundamentales:</p>
+                    
+                    <div class="stats-box">
+                        <ol>
+                            <li><strong>RBAC (Role-Based Access Control):</strong> En lugar de dar permisos a cada usuario individualmente, creas "Roles" (ej: Recepcionista, Contador) y les asignas permisos. Luego, asignas el Rol al usuario. Si cambian las reglas, solo modificas el Rol, no a los 100 usuarios.</li>
+                            <li><strong>Vistas de Seguridad (Security Views):</strong> Son como "ventanas con filtro". En lugar de darle al usuario acceso directo a la tabla <code>usuario</code> (donde podría ver datos de todos), le das acceso a una <code>VIEW</code> que filtra los datos usando la función <code>USER()</code>, mostrando <strong>solo</strong> su propia información.</li>
+                            <li><strong>Principio de Menor Privilegio:</strong> Primero otorgas permisos amplios, luego usas <code>REVOKE</code> para quitar el acceso directo a las tablas sensibles y finalmente <code>GRANT</code> solo sobre la Vista segura.</li>
+                            <li><strong><code>FLUSH PRIVILEGES</code>:</strong> Obliga a MySQL a recargar las tablas de permisos en memoria. Sin esto, los cambios podrían no surtir efecto hasta que se reinicie el servidor.</li>
+                        </ol>
+                    </div>
+
+                    <h2>🛠️ La Plantilla Maestra Comentada (Universal)</h2>
+                    <p>A continuación se presenta la <strong>Plantilla Maestra</strong>. Está diseñada para que puedas copiar, adaptar y escalar la seguridad de cualquier nuevo módulo o rol que se agregue al sistema.</p>
+
+<pre><code>-- ============================================================================
+-- 👑 PLANTILLA MAESTRA DE SEGURIDAD Y ROLES (RBAC)
+-- Diseñada para implementar el Principio de Menor Privilegio en MySQL.
+-- ============================================================================
+
+USE nombre_de_tu_base_de_datos;
+
+-- =========================================================================
+-- PASO 1: CREACIÓN DE ROLES (Los "Cargos" del sistema)
+-- =========================================================================
+CREATE ROLE IF NOT EXISTS 'NombreDelRol';
+
+-- =========================================================================
+-- PASO 2: ASIGNACIÓN DE PERMISOS GRANULARES AL ROL
+-- Regla: Otorgar solo lo estrictamente necesario (SELECT, INSERT, UPDATE, DELETE)
+-- =========================================================================
+-- Permisos de escritura/lectura en tablas operativas
+GRANT SELECT, INSERT, UPDATE ON nombre_base.tabla_operativa TO 'NombreDelRol';
+-- Permisos de solo lectura en tablas de referencia o catálogo
+GRANT SELECT ON nombre_base.tabla_catalogo TO 'NombreDelRol';
+
+-- =========================================================================
+-- PASO 3: CREACIÓN DE USUARIOS Y ASIGNACIÓN DE ROLES
+-- =========================================================================
+-- Crear el usuario (usar '%' permite acceso desde cualquier IP, ideal para desarrollo; en producción usar 'localhost' o IP específica)
+CREATE USER IF NOT EXISTS 'nombre_usuario'@'%' IDENTIFIED BY 'ContraseñaSegura123!';
+
+-- Asignar el rol al usuario
+GRANT 'NombreDelRol' TO 'nombre_usuario'@'%';
+
+-- Establecer el rol como predeterminado (para que el usuario no tenga que activarlo manualmente con SET ROLE)
+SET DEFAULT ROLE 'NombreDelRol' TO 'nombre_usuario'@'%';
+
+-- =========================================================================
+-- PASO 4: CREACIÓN DE VISTAS DE SEGURIDAD (Opcional pero Altamente Recomendado)
+-- Filtra los datos para que el usuario solo vea lo que le corresponde.
+-- =========================================================================
+CREATE OR REPLACE VIEW nombre_base.vista_segura_del_rol AS
+SELECT columna1, columna2 
+FROM nombre_base.tabla_sensible
+-- El truco: Filtrar usando la función USER() que devuelve 'usuario@host'
+WHERE campo_identificador = SUBSTRING_INDEX(USER(), '@', 1); 
+
+-- =========================================================================
+-- PASO 5: APLICACIÓN DEL PRINCIPIO DE MENOR PRIVILEGIO (Hardening)
+-- Quitamos el acceso directo a la tabla y lo reemplazamos por acceso a la Vista.
+-- =========================================================================
+REVOKE ALL PRIVILEGES ON nombre_base.tabla_sensible FROM 'NombreDelRol';
+GRANT SELECT ON nombre_base.vista_segura_del_rol TO 'NombreDelRol';
+
+-- =========================================================================
+-- PASO 6: APLICAR CAMBIOS INMEDIATAMENTE
+-- =========================================================================
+FLUSH PRIVILEGES;</code></pre>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Tab navigation and features script -->
+    <script>
+        // Switch between tabs
+        function switchTab(tabId) {
+            const panels = document.querySelectorAll('.tab-panel');
+            panels.forEach(panel => panel.classList.remove('active'));
+            
+            const targetPanel = document.getElementById(tabId);
+            if (targetPanel) {
+                targetPanel.classList.add('active');
+            }
+            
+            const links = document.querySelectorAll('.sidebar-link');
+            links.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('onclick').includes(tabId)) {
+                    link.classList.add('active');
+                }
+            });
+            
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                sidebar.classList.remove('open');
+            }
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                sidebar.classList.toggle('open');
+            }
+        }
+
+        // Setup copy buttons on code blocks
+        document.addEventListener('DOMContentLoaded', () => {
+            const preBlocks = document.querySelectorAll('pre');
+            preBlocks.forEach(pre => {
+                const code = pre.querySelector('code');
+                if (!code) return;
+                
+                const btn = document.createElement('button');
+                btn.className = 'copy-btn';
+                btn.innerHTML = '<span>📋</span> Copiar';
+                
+                btn.addEventListener('click', async () => {
+                    const text = code.innerText;
+                    try {
+                        await navigator.clipboard.writeText(text);
+                        btn.innerHTML = '<span>✅</span> ¡Copiado!';
+                        btn.classList.add('copied');
+                        
+                        setTimeout(() => {
+                            btn.innerHTML = '<span>📋</span> Copiar';
+                            btn.classList.remove('copied');
+                        }, 2000);
+                    } catch (err) {
+                        console.error('Failed to copy code: ', err);
+                        btn.innerHTML = '<span>❌</span> Error';
+                        setTimeout(() => {
+                            btn.innerHTML = '<span>📋</span> Copiar';
+                        }, 2000);
+                    }
+                });
+                
+                pre.style.position = 'relative';
+                pre.appendChild(btn);
+            });
+
+            // ==========================================
+            // MOTOR DE RESALTADO DE PALABRAS RESERVADAS SQL
+            // ==========================================
+            const sqlKeywords = new Set([
+                'ASC', 'BY', 'DESC', 'GROUP', 'HAVING', 'LIMIT', 'ORDER',
+                'GRANT', 'PRIVILEGES', 'ROLE', 'TO', 'ALL',
+                'ALTER', 'CHARACTER', 'COLLATE', 'CREATE', 'DATABASE', 'DROP', 'INDEX', 'TABLE', 'USE',
+                'AS', 'DELETE', 'FROM', 'INSERT', 'SELECT', 'UPDATE', 'VALUES', 'WHERE',
+                'INTO', 'SET',
+                'AVG', 'COUNT', 'MAX', 'MIN', 'OVER', 'SUM',
+                'CONCAT', 'CURDATE', 'CURRENT_TIMESTAMP', 'DATE_ADD', 'DATE_FORMAT', 'DATE_SUB', 'NOW', 'REPLACE', 'UNIX_TIMESTAMP', 'UUID',
+                'CASE', 'ELSE', 'END', 'IF', 'THEN', 'WHEN',
+                'AND', 'BETWEEN', 'EXISTS', 'IN', 'IS', 'LIKE', 'NOT', 'OR',
+                'BEGIN', 'DECLARE', 'DELIMITER', 'DO', 'OUT', 'PROCEDURE', 'TRIGGER', 'WHILE',
+                'DEFAULT', 'FOREIGN', 'KEY', 'NULL', 'PRIMARY', 'REFERENCES', 'UNIQUE',
+                'BOOLEAN', 'DATE', 'DATETIME', 'DECIMAL', 'ENUM', 'INT', 'INTEGER', 'JSON', 'TEXT', 'TIME', 'TIMESTAMP', 'VARCHAR',
+                'JOIN', 'LEFT', 'ON', 'CALL', 'RETURN', 'READS', 'DETERMINISTIC', 'SIGNAL', 'SQLSTATE', 'MESSAGE_TEXT', 
+                'INNER', 'RIGHT', 'FULL', 'CROSS', 'NATURAL', 'USING', 'CASCADE', 'RESTRICT', 'ACTION', 'TRUE', 'FALSE', 'UNKNOWN', 'TEMPORARY', 'VIEW'
+            ]);
+
+            function highlightSQL() {
+                // Apuntar a todos los bloques de código y elementos de texto que puedan contener SQL
+                const elements = document.querySelectorAll('code, p, li, td, th');
+                elements.forEach(el => {
+                    if (el.classList.contains('sql-kw')) return;
+                    
+                    // Usar TreeWalker para procesar solo nodos de texto y no romper el HTML existente
+                    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
+                    const textNodes = [];
+                    let node;
+                    while (node = walker.nextNode()) {
+                        textNodes.push(node);
+                    }
+
+                    textNodes.forEach(textNode => {
+                        const text = textNode.nodeValue;
+                        // Coincidir palabras (letras, números, guiones bajos)
+                        const regex = /\b([A-Za-z_][A-Za-z0-9_]*)\b/g;
+                        let match;
+                        let lastIndex = 0;
+                        let newHTML = '';
+                        let hasKeyword = false;
+
+                        while ((match = regex.exec(text)) !== null) {
+                            const word = match[1];
+                            if (sqlKeywords.has(word.toUpperCase())) {
+                                hasKeyword = true;
+                                newHTML += text.substring(lastIndex, match.index);
+                                newHTML += `<span class="sql-kw">${word}</span>`;
+                                lastIndex = regex.lastIndex;
+                            }
+                        }
+
+                        if (hasKeyword) {
+                            newHTML += text.substring(lastIndex);
+                            const span = document.createElement('span');
+                            span.innerHTML = newHTML;
+                            textNode.parentNode.replaceChild(span, textNode);
+                        }
+                    });
+                });
+            }
+
+            // Ejecutar el resaltado después de que el DOM esté listo
+            highlightSQL();
+        });
+    </script>
+</body>
+</html>
