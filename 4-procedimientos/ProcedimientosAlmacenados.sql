@@ -17,7 +17,7 @@ BEGIN
 -- Validar que el usuario no tenga una membresia activa
 	SELECT COUNT(*) INTO v_membresia_activa
 	FROM membresia_usuario
-	WHERE usuario_id = p_usuario_id AND estado = 'ACTIVA';
+	WHERE id = p_tipo_membresia_id AND estado = 'ACTIVO';
 	IF v_membresia_activa > 0 THEN
 		SIGNAL SQLSTATE '45000'
 		SET MESSAGE_TEXT = 'Error: El usuario ya tiene una membresia activa.';
@@ -25,7 +25,7 @@ BEGIN
 -- Obtener los datos del tipo de membresia (Su duracion y su precio)
 	SELECT duracion_dias, precio_base INTO v_duracion, v_precio
 	FROM tipos_membresia
-	WHERE id = p_tipo_membresia AND estado = 'ACTIVO';
+	WHERE id = p_tipo_membresia_id AND estado = 'ACTIVO';
 	IF v_duracion IS NULL THEN
 		SIGNAL SQLSTATE '45000'
 		SET MESSAGE_TEXT = 'Error: El tipo de membresia no existe o esta inactivo.';
@@ -291,7 +291,7 @@ BEGIN
 			CONCAT('REEMBOLSO-', LEFT(UUID(), 8)),
 			v_factura_id,
 			v_usuario_id,
-			'metodo_defecto_id', -- ID del metodo de reembolso
+			metodo_pago_id, -- ID del metodo de reembolso
 			v_monto_reembolso,
 			v_monto_reembolso,
 			'REEMBOLSADO',
@@ -404,7 +404,7 @@ BEGIN
 -- Sumamos membresias, reservas y servicios contratados que no hayan sido facturados todavia
 	SELECT IFNULL(SUM(total), 0) INTO v_total_empresa 
 	FROM (
-		SELECT total
+		SELECT precio_pagado
 		FROM membresia_usuario
 		WHERE usuario_id
 		IN (SELECT id
@@ -473,7 +473,7 @@ BEGIN
 	UPDATE facturas
 	SET total = total + (total * p_porcentaje_recargo),
 		saldo_pendiente = saldo_pendiente + (total * p_porcentaje_recargo),
-		notas = CONCAT(IFNULL(notas, ''), 'Recargo por mora del ', (p_porcentaje_recargo * 100), '% aplicado el ', CURRENT_DATE())
+		observaciones = CONCAT(IFNULL(observacione, ''), 'Recargo por mora del ', (p_porcentaje_recargo * 100), '% aplicado el ', CURRENT_DATE())
 	WHERE estado = 'PENDIENTE'
 	AND fecha_vencimiento < DATE_SUB(CURRENT_DATE(), INTERVAL p_dias_atraso DAY)
 -- Evitamos aplicar el recargo por mora multiples veces al verificar si ya tiene la palabra 'Recargo'
@@ -501,143 +501,252 @@ DELIMITER ;
 -- Accesos y Asistencias
 -- 1. Registrar acceso de usuario (Entrada)
 -- Valida membresia o reserva activa y registra entrada en logs
+DROP PROCEDURE IF EXISTS RegistrarAccesoEntrada;
 DELIMITER //
 CREATE PROCEDURE RegistrarAccesoEntrada(
 	IN p_usuario_id VARCHAR(36),
-	IN p_espacio_id VARCHAR(36)
+	IN p_credencial_id VARCHAR(36),
+	IN p_espacio_id VARCHAR(36),
+	IN p_punto_acceso VARCHAR(100)
 )
 BEGIN
-	DECLARE v_es_valido INT DEFAULT 0;
--- Validamos acceso segun si tiene membresia activa o si tiene una reserva confirmada
--- Primero verificamos si tiene una membresia activa
-	SELECT COUNT(*) INTO v_es_valido 
-	FROM membresia_usuario
-	WHERE usuario_id = p_usuario_id 
+	DECLARE v_tipo_credencial ENUM('RFID','QR','BIOMETRICO','TEMPORAL');
+	DECLARE v_metodo_validacion ENUM('RFID','QR','BIOMETRICO','MANUAL','AUTOMATICO');
+	DECLARE v_validacion_membresia ENUM('ACTIVA','VENCIDA','SUSPENDIDA','SIN_MEMBRESIA');
+	DECLARE v_validacion_reserva ENUM('CON_RESERVA','SIN_RESERVA','RESERVA_VENCIDA') DEFAULT 'SIN_RESERVA';
+	DECLARE v_tiene_reserva INT DEFAULT 0;
+	DECLARE v_motivo_rechazo ENUM('CREDENCIAL_INVALIDA','CREDENCIAL_REVOCADA','CREDENCIAL_VENCIDA','MEMBRESIA_VENCIDA','MEMBRESIA_SUSPENDIDA','SIN_MEMBRESIA','SIN_RESERVA','HORARIO_NO_PERMITIDO','ESPACIO_NO_DISPONIBLE','INTENTOS_EXCEDIDOS','SOSPECHA_FRAUDE','OTRO');
+
+-- 1) La credencial debe existir, pertenecer al usuario y estar ACTIVA
+	SELECT tipo_credencial INTO v_tipo_credencial
+	FROM credenciales_acceso
+	WHERE id = p_credencial_id
+	AND usuario_id = p_usuario_id
 	AND estado = 'ACTIVA';
--- Si no tiene membresia, verificamos si tiene una reserva para el dia de hoy
-	IF v_es_valido = 0 THEN
-		SELECT COUNT(*) INTO v_es_valido
+
+	IF v_tipo_credencial IS NULL THEN
+		INSERT INTO intentos_acceso_rechazados (
+			usuario_id, credencial_id, metodo_validacion, punto_acceso,
+			motivo_rechazo, descripcion_detallada
+		) VALUES (
+			p_usuario_id, p_credencial_id, 'MANUAL', p_punto_acceso,
+			'CREDENCIAL_INVALIDA', 'Credencial inexistente, de otro usuario o inactiva.'
+		);
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Acceso Denegado: Credencial invalida o inactiva.';
+	END IF;
+
+-- 2) Metodo de validacion segun el tipo de credencial (TEMPORAL se trata como MANUAL)
+	SET v_metodo_validacion = CASE WHEN v_tipo_credencial IN ('RFID','QR','BIOMETRICO') THEN v_tipo_credencial ELSE 'MANUAL' END;
+
+-- 3) Estado de la membresia mas reciente del usuario
+	SELECT estado INTO v_validacion_membresia
+	FROM membresia_usuario
+	WHERE usuario_id = p_usuario_id
+	ORDER BY fecha_inicio DESC
+	LIMIT 1;
+
+	IF v_validacion_membresia IS NULL THEN
+		SET v_validacion_membresia = 'SIN_MEMBRESIA';
+	END IF;
+
+-- 4) Si no hay membresia activa, buscamos una reserva confirmada para hoy, en ese espacio y a esta hora
+	IF v_validacion_membresia != 'ACTIVA' THEN
+		SELECT COUNT(*) INTO v_tiene_reserva
 		FROM reservas
 		WHERE usuario_id = p_usuario_id
 		AND espacio_id = p_espacio_id
 		AND fecha_reserva = CURRENT_DATE()
 		AND CURRENT_TIME() BETWEEN hora_inicio AND hora_fin
 		AND estado = 'CONFIRMADA';
+
+		IF v_tiene_reserva > 0 THEN
+			SET v_validacion_reserva = 'CON_RESERVA';
+		END IF;
 	END IF;
--- Si no es valido, lanzamos un error bloqueando el acceso
-	IF v_es_valido = 0 THEN
-		SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Acceso Denegado: Usuario sin membresia ni reserva confirmada.';
-	ELSE
--- Si es valido, registramos la entrada en los logs de asistencia
-		INSERT INTO asistencia_logs (
-			id,
-			usuario_id,
-			espacio_id,
-			fecha,
-			hora_entrada,
-			tipo_movimiento
+
+-- 5) Sin membresia activa ni reserva confirmada -> se rechaza y se registra el intento
+	IF v_validacion_membresia != 'ACTIVA' AND v_tiene_reserva = 0 THEN
+
+		IF v_validacion_membresia = 'VENCIDA' THEN
+			SET v_motivo_rechazo = 'MEMBRESIA_VENCIDA';
+		ELSEIF v_validacion_membresia = 'SUSPENDIDA' THEN
+			SET v_motivo_rechazo = 'MEMBRESIA_SUSPENDIDA';
+		ELSE
+			SET v_motivo_rechazo = 'SIN_MEMBRESIA';
+		END IF;
+
+		INSERT INTO intentos_acceso_rechazados (
+			usuario_id, credencial_id, metodo_validacion, punto_acceso,
+			motivo_rechazo, descripcion_detallada
 		) VALUES (
-			UUID(),
-			p_usuario_id,
-			p_espacio_id,
-			CURRENT_DATE(),
-			CURRENT_TIME(),
-			'ENTRADA'
+			p_usuario_id, p_credencial_id, v_metodo_validacion, p_punto_acceso,
+			v_motivo_rechazo, 'Usuario sin membresia activa ni reserva confirmada.'
 		);
+
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Acceso Denegado: Usuario sin membresia ni reserva confirmada.';
+	ELSE
+-- 6) Acceso valido: se registra la entrada
+		INSERT INTO accesos (
+			usuario_id, credencial_id, tipo_acceso, metodo_validacion,
+			punto_acceso, validacion_membresia, validacion_reserva, estado
+		) VALUES (
+			p_usuario_id, p_credencial_id, 'ENTRADA', v_metodo_validacion,
+			p_punto_acceso, v_validacion_membresia, v_validacion_reserva, 'PERMITIDO'
+		);
+
 		SELECT 'Acceso Permitido' AS mensaje;
 	END IF;
-END // 
+END //
 DELIMITER ;
 -- 2. Registrar salida de usuario
 -- Completa la asistencia del usuario y marca hora de salida
+DROP PROCEDURE IF EXISTS RegistrarAccesoSalida;
 DELIMITER //
 CREATE PROCEDURE RegistrarAccesoSalida(
-	IN p_usuario_id VARCHAR(36)
+	IN p_usuario_id VARCHAR(36),
+	IN p_credencial_id VARCHAR(36),
+	IN p_punto_acceso VARCHAR(100)
 )
-BEGIN 
-	DECLARE v_log_id VARCHAR(36);
--- Buscamos el ID del registro de entrada mas reciente que no tenga hora de salida
-	SELECT id INTO v_log_id
-	FROM asistencia_logs
-	WHERE usuario_id = p_usuario_id 
-	AND tipo_movimiento = 'ENTRADA'
-	AND hora_salida IS NULL
-	ORDER BY fecha DESC, hora_entrada DESC 
-	LIMIT 1;
--- Si no existe un registro de entrada, se lanza un error
-	IF v_log_id IS NULL THEN
+BEGIN
+	DECLARE v_tipo_credencial ENUM('RFID','QR','BIOMETRICO','TEMPORAL');
+	DECLARE v_metodo_validacion ENUM('RFID','QR','BIOMETRICO','MANUAL','AUTOMATICO');
+	DECLARE v_validacion_membresia ENUM('ACTIVA','VENCIDA','SUSPENDIDA','SIN_MEMBRESIA');
+	DECLARE v_ultimo_id VARCHAR(36);
+	DECLARE v_ultimo_tipo ENUM('ENTRADA','SALIDA');
+
+-- 1) La credencial debe existir, pertenecer al usuario y estar ACTIVA
+	SELECT tipo_credencial INTO v_tipo_credencial
+	FROM credenciales_acceso
+	WHERE id = p_credencial_id
+	AND usuario_id = p_usuario_id
+	AND estado = 'ACTIVA';
+
+	IF v_tipo_credencial IS NULL THEN
+		INSERT INTO intentos_acceso_rechazados (
+			usuario_id, credencial_id, metodo_validacion, punto_acceso,
+			motivo_rechazo, descripcion_detallada
+		) VALUES (
+			p_usuario_id, p_credencial_id, 'MANUAL', p_punto_acceso,
+			'CREDENCIAL_INVALIDA', 'Credencial inexistente, de otro usuario o inactiva (intento de salida).'
+		);
 		SIGNAL SQLSTATE '45000'
-		SET MESSAGE_TEXT = 'Error: No se encontro ningun registro de entrada';
-	ELSE
--- Actualizamos el registro de salida
-		UPDATE asistencia_logs
-		SET hora_salida = CURRENT_TIME(),
-			tipo_movimiento = 'SALIDA'
-		WHERE id = v_log_id;
-		SELECT 'Salida registrada correctamente' AS mensaje;
+		SET MESSAGE_TEXT = 'Error: Credencial invalida o inactiva.';
 	END IF;
-END // 
+
+	SET v_metodo_validacion = CASE WHEN v_tipo_credencial IN ('RFID','QR','BIOMETRICO') THEN v_tipo_credencial ELSE 'MANUAL' END;
+
+-- 2) Buscamos el ultimo registro de acceso del usuario (entrada o salida)
+	SELECT id, tipo_acceso INTO v_ultimo_id, v_ultimo_tipo
+	FROM accesos
+	WHERE usuario_id = p_usuario_id
+	ORDER BY fecha_hora DESC
+	LIMIT 1;
+
+-- 3) Si no hay una entrada abierta, no hay nada que cerrar
+	IF v_ultimo_id IS NULL OR v_ultimo_tipo = 'SALIDA' THEN
+		SIGNAL SQLSTATE '45000'
+		SET MESSAGE_TEXT = 'Error: No se encontro ningun registro de entrada abierto para este usuario.';
+	END IF;
+
+-- 4) Dejamos constancia del estado de membresia al momento de la salida (no bloquea la salida)
+	SELECT estado INTO v_validacion_membresia
+	FROM membresia_usuario
+	WHERE usuario_id = p_usuario_id
+	ORDER BY fecha_inicio DESC
+	LIMIT 1;
+
+	IF v_validacion_membresia IS NULL THEN
+		SET v_validacion_membresia = 'SIN_MEMBRESIA';
+	END IF;
+
+-- 5) Registramos la salida como una fila nueva (accesos es un log; no se "actualiza" la entrada)
+	INSERT INTO accesos (
+		usuario_id, credencial_id, tipo_acceso, metodo_validacion,
+		punto_acceso, validacion_membresia, validacion_reserva, estado
+	) VALUES (
+		p_usuario_id, p_credencial_id, 'SALIDA', v_metodo_validacion,
+		p_punto_acceso, v_validacion_membresia, 'SIN_RESERVA', 'PERMITIDO'
+	);
+
+	SELECT 'Salida registrada correctamente' AS mensaje;
+END //
 DELIMITER ;
 -- 3. Generar reporte diario de asistencias
 -- Resume cantidad de ingresos, usuarios unicos y horarios pico
+DROP PROCEDURE IF EXISTS GenerarReporteDiarioAsistencia;
 DELIMITER //
 CREATE PROCEDURE GenerarReporteDiarioAsistencia(
 	IN p_fecha DATE
 )
 BEGIN
--- Este reporte unico entregara
--- 1. Total de Ingresos al establecimiento
--- 2. Cantidad de usuarios unicos que pasaron por el establecimiento
--- 3. La hora pico
 	SELECT
 		COUNT(*) AS total_ingresos,
 		COUNT(DISTINCT usuario_id) AS usuarios_unicos,
--- Obtenemos la hora donde hubo mas registros de entrada
-		(SELECT HOUR(hora_entrada)
-		FROM asistencia_logs
-		WHERE fecha = p_fecha
-		GROUP BY HOUR(hora_entrada)
-		ORDER BY COUNT(*) DESC
-		LIMIT 1) AS hora_pico -- Nos entrega unicamente la hora con mas trafico
-	FROM asistencia_logs
-	WHERE fecha = p_fecha; -- Se pasa fecha como parametro para mayor flexibilidad al momento de hacer consultas
-END // 
+		(SELECT HOUR(fecha_hora)
+		 FROM accesos
+		 WHERE DATE(fecha_hora) = p_fecha
+		 AND tipo_acceso = 'ENTRADA'
+		 AND estado = 'PERMITIDO'
+		 GROUP BY HOUR(fecha_hora)
+		 ORDER BY COUNT(*) DESC
+		 LIMIT 1) AS hora_pico
+	FROM accesos
+	WHERE DATE(fecha_hora) = p_fecha
+	AND tipo_acceso = 'ENTRADA'
+	AND estado = 'PERMITIDO';
+END //
 DELIMITER ;
 -- 4. Marcar reservas como "No Show" y generar penalizacion
 -- Detecta reservas confirmadas sin asistencia y aplica cargo automatico
+DROP PROCEDURE IF EXISTS DetectarNoShow;
 DELIMITER //
 CREATE PROCEDURE DetectarNoShow()
 BEGIN
--- Buscamos reservas confirmadas que ya pasaron y que no tienen un registro de entrada en los logs
--- Usamos un UPDATE con INNER JOIN para marcar el estado
+-- 1) Marcamos como NOSHOW las reservas confirmadas y pasadas sin entrada real registrada en accesos
 	UPDATE reservas r
-	LEFT JOIN asistencia_logs al ON r.usuario_id = al.usuario_id
-		AND r.fecha_reserva = al.fecha
-		AND al.tipo_movimiento = 'ENTRADA'
+	LEFT JOIN accesos ac
+		ON r.usuario_id = ac.usuario_id
+		AND DATE(ac.fecha_hora) = r.fecha_reserva
+		AND ac.tipo_acceso = 'ENTRADA'
+		AND ac.estado = 'PERMITIDO'
 	SET r.estado = 'NOSHOW',
+		r.fecha_cancelacion = CURRENT_TIMESTAMP(),
 		r.motivo_cancelacion = 'NOSHOW detectado por el sistema.'
 	WHERE r.estado = 'CONFIRMADA'
-	AND r.fecha_reserva < CURRENT_DATE() -- Reservas de dias anteriores
-	AND al.id IS NULL; -- No tiene registro de entrada
--- Se inserta una multa a los que se les marco con su NOSHOW
+	AND r.fecha_reserva < CURRENT_DATE()
+	AND ac.id IS NULL;
+
+-- 2) Multa del 20% solo para los NOSHOW que aun no tienen una multa registrada
 	INSERT INTO servicios_contratados (
-		id,
-		usuario_id,
-		concepto,
-		total,
-		estado
+		codigo, usuario_id, reserva_id, fecha_uso,
+		cantidad, unidad_cobro, precio_unitario, subtotal, total,
+		estado, notas
 	)
 	SELECT
-		UUID(),
-		usuario_id,
-		CONCAT('Multa por NOSHOW - Reserva: ', id),
-		(precio_final * 0.20), -- Multa del 20% de la Reserva 
-		'ACTIVO'
-	FROM reservas
-	WHERE estado = 'NOSHOW'
-	AND fecha_cancelacion = CURRENT_TIMESTAMP(); -- Se aplica la multa a las reservas de hoy
+		CONCAT('MULTA-NOSHOW-', LEFT(r.id, 8)),
+		r.usuario_id,
+		r.id,
+		CURRENT_DATE(),
+		1.00,
+		'FIJO',
+		(r.precio_final * 0.20),
+		(r.precio_final * 0.20),
+		(r.precio_final * 0.20),
+		'ACTIVO',
+		CONCAT('Multa por NOSHOW - Reserva: ', r.id)
+	FROM reservas r
+	WHERE r.estado = 'NOSHOW'
+	AND r.motivo_cancelacion = 'NOSHOW detectado por el sistema.'
+	AND NOT EXISTS (
+		SELECT 1 FROM servicios_contratados sc
+		WHERE sc.reserva_id = r.id
+		AND sc.notas LIKE 'Multa por NOSHOW%'
+	);
+
 	SELECT 'Proceso de deteccion de NOSHOWS finalizado.' AS mensaje;
-END // 
+END //
 DELIMITER ;
 -- Corporativos y Administracion
 -- 1. Registrar lote de empleados de una empresa con membresia corporativa
@@ -690,7 +799,7 @@ BEGIN
 		fecha_cancelacion = CURRENT_TIMESTAMP(),
 		motivo_cancelacion = CONCAT('Cancelacion por membresia expirada o eliminada: ', p_motivo)
 	WHERE usuario_id = p_usuario_id
-	AND estado IN ('PÈNDIENTE','CONFIRMADA')
+	AND estado IN ('PENDIENTE','CONFIRMADA')
 	AND fecha_reserva >= CURRENT_DATE();
 -- Verificamos si hubo reservas futuras que se cancelaron automaticamente
 	IF ROW_COUNT() > 0 THEN
