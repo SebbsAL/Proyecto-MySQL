@@ -1085,7 +1085,7 @@ FROM pagos
 WHERE estado = 'PAGADO'
 GROUP BY mes;
 
--- 100. Mostrar usuarios con más de 10 reservas, más de $500 en facturación y membresía activa (con múltiples joins). abraza penes el q lea esto
+-- 100. Mostrar usuarios con más de 10 reservas, más de $500 en facturación y membresía activa (con múltiples joins).
 
 SELECT
     u.id,
