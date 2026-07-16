@@ -126,7 +126,7 @@
 | `p_porcentaje_recargo` | `DECIMAL(5,2)` | Valor decimal del recargo (Ej. `0.10` para un 10%). |
 
 ### 3.4. `BloquearServiciosPorDeuda`
-**Propósito:** Restringe de forma automatizada los servicios adicionales y amenidades de todos los usuarios vinculados a facturas en mora, cambiándolos a `BLOQUEADO` y registrando el incidente para el equipo de atención al cliente.
+**Propósito:** Restringe de forma automatizada los servicios adicionales y amenidades de todos los usuarios vinculados a facturas en mora, cambiándolas a `BLOQUEADO` y registrando el incidente para el equipo de atención al cliente.
 
 *No requiere parámetros.*
 
@@ -135,24 +135,28 @@
 ## 🛡️ 4. Módulo de Accesos y Asistencias
 
 ### 4.1. `RegistrarAccesoEntrada`
-**Propósito:** Control físico/digital en la puerta. Valida si el usuario tiene privilegios de ingreso verificando si cuenta con: (A) Una membresía `ACTIVA` o (B) Una reserva `CONFIRMADA` programada en el horario y fecha actuales. En caso afirmativo, estampa su hora de `ENTRADA` en la bitácora de asistencia.
+**Propósito:** Control físico/digital robusto en puerta. Valida si la credencial (RFID, QR, Biométrico) proporcionada está activa. Luego verifica si el usuario tiene privilegios verificando si cuenta con: (A) Una membresía `ACTIVA` o (B) Una reserva `CONFIRMADA` en ese horario/espacio. Si el acceso es válido, estampa la `ENTRADA`; si falla, guarda un log detallado en la tabla de `intentos_acceso_rechazados`.
 
 **Parámetros:**
 | Parámetro | Tipo | Descripción |
 | :--- | :--- | :--- |
-| `p_usuario_id` | `VARCHAR(36)` | ID del usuario frente a la terminal/puerta. |
-| `p_espacio_id` | `VARCHAR(36)` | ID del espacio o sucursal donde se escanea el acceso. |
+| `p_usuario_id` | `VARCHAR(36)` | ID del usuario intentando acceder. |
+| `p_credencial_id` | `VARCHAR(36)` | ID de la credencial física o digital utilizada. |
+| `p_espacio_id` | `VARCHAR(36)` | ID del espacio o sucursal donde se intenta el acceso. |
+| `p_punto_acceso` | `VARCHAR(100)` | Nombre o identificador del torniquete/puerta específica. |
 
 ### 4.2. `RegistrarAccesoSalida`
-**Propósito:** Cierra el ciclo de asistencia. Busca en la bitácora (`ORDER BY fecha DESC LIMIT 1`) el último registro de `ENTRADA` abierto de un usuario y estampa su hora de `SALIDA`.
+**Propósito:** Cierra el ciclo de asistencia. Valida nuevamente la credencial aportada, busca en la bitácora el último registro de `ENTRADA` abierto del usuario y estampa su registro de `SALIDA` como una nueva fila en el log de accesos.
 
 **Parámetros:**
 | Parámetro | Tipo | Descripción |
 | :--- | :--- | :--- |
 | `p_usuario_id` | `VARCHAR(36)` | ID del usuario que finaliza su permanencia. |
+| `p_credencial_id` | `VARCHAR(36)` | ID de la credencial usada para validar la salida. |
+| `p_punto_acceso` | `VARCHAR(100)` | Nombre o identificador de la puerta de salida. |
 
 ### 4.3. `GenerarReporteDiarioAsistencia`
-**Propósito:** Resumen analítico gerencial (BI) que mediante funciones de agregación y subconsultas determina: Total de ingresos brutos, total de usuarios únicos (Reach) y calcula en qué hora exacta operó el máximo tráfico.
+**Propósito:** Resumen analítico gerencial (BI) que mediante funciones de agregación determina: Total de ingresos válidos del día, total de usuarios únicos (Reach) y calcula mediante subconsultas la hora pico de tráfico.
 
 **Parámetros:**
 | Parámetro | Tipo | Descripción |
@@ -160,7 +164,7 @@
 | `p_fecha` | `DATE` | Día en calendario a evaluar y reportar. |
 
 ### 4.4. `DetectarNoShow`
-**Propósito:** Procedimiento financiero y de control. Combina la tabla de reservas y el log de asistencias (`LEFT JOIN ... IS NULL`). Si el sistema descubre una reserva pasada donde el usuario jamás tuvo un registro de entrada, la clasifica como `NOSHOW` y le inyecta una penalidad (multa) automática del 20% en sus servicios.
+**Propósito:** Procedimiento financiero y de control. Combina la tabla de reservas y el log de accesos físicos (`LEFT JOIN`). Si descubre una reserva pasada donde el usuario jamás validó una entrada, la clasifica como `NOSHOW` y automáticamente le inyecta una penalidad del 20% del valor de la reserva en sus `servicios_contratados`.
 
 *No requiere parámetros.*
 
