@@ -9,17 +9,15 @@
 use coworking;
 
 SELECT
-	us.id,
-	CONCAT(us.nombre,' ',us.apellidos) AS Nombre_completo,
-	tm.nombre AS tipo_membresia,
-	SUM(re.precio_final) AS total_pagado
+	us.id, -- traigo el id para hacer la consulta mas profesional
+	CONCAT(us.nombre,' ',us.apellidos) AS Nombre_completo, -- concateno el nombre y el apellido pues para tener el nombre completo
+	tm.nombre AS tipo_membresia, -- muestro el tipo de membresia
+	SUM(re.precio_final) AS total_pagado -- y usando SUM extraigo de reservas el precio final de la reserva 
 	FROM usuario us
-	JOIN membresia_usuario mu ON mu.usuario_id = us.id
-	JOIN tipos_membresia tm ON mu.tipo_membresia_id = tm.id
-	JOIN reservas re ON  re.usuario_id = us.id
-	WHERE mu.estado = 'ACTIVA'
-	GROUP BY us.id, Nombre_completo, tm.nombre 
-	HAVING  total_pagado > 100
-	ORDER BY total_pagado DESC 
-	 
-	
+	JOIN membresia_usuario mu ON mu.usuario_id = us.id -- conecto la tabla membresia_usuario con usuario por medio del id de la tabla usuario 
+	JOIN tipos_membresia tm ON mu.tipo_membresia_id = tm.id -- luego conecto la tabla tipos_membresia con membresia_usuario por medio de tipo_membresia_id
+	JOIN reservas re ON  re.usuario_id = us.id -- y por ultimo conecto la tabla reservas con la de usuarios por medio del id del usuario
+	WHERE mu.estado = 'ACTIVA' -- verifico que en la tabla membresia_usuario el estado sea = 'ACTIVA', pongo 'ACTIVA' pq asi eta 
+	GROUP BY us.id, Nombre_completo, tm.nombre  -- agrupo por todos los valores para q sum funcione bien
+	HAVING  total_pagado > 100 -- verifico mediante el la forma q nombre re.precio_final que sea mayor que 100 
+	ORDER BY total_pagado DESC  -- y ordeno de forma descendente... DE MAS a menos
