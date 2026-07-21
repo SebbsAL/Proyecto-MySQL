@@ -15,5 +15,5 @@ SELECT
 	INNER JOIN pagos p ON p.usuario_id = u.id -- Tomamos datos de la tabla Pagos que hagan match
 	WHERE mu.estado = 'ACTIVA' -- Toma unicamente los usuarios con membresias activas
 	GROUP BY NombreUsuario, TipoMembresia, EstadoMembresia, TipoMoneda -- Se agrupa los resultados por el id del usuario mas su nombre que ya se concateno arriba en el select
-	HAVING total_gastado > 100 -- Se descarta a los usuarios que hayan gastado menos de 100 dolares
+	HAVING total_gastado > 100 -- Se descarta a los usuarios que hayan gastado mas de 100 dolares o en la moneda en la que pagaron
 	ORDER BY total_gastado DESC; -- Se ordena de mayor a menor de manera descendente
